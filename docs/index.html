@@ -1,0 +1,949 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="description" content="Hands-on XCP-ng lab and lesson for engineers coming from VMware vSphere."><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>XCP-ng for VMware Engineers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: a lab bench. Tabs run the lab in order; text-mode screens and the shell stay dark in both themes, the chrome around them follows the theme. */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --ink:#14202e; --muted:#566678; --line:#d5dce7;
+  --accent:#c9560a; --accent-ink:#ffffff; --teal:#0e7480; --ok:#1c8650; --warn:#a96a06; --bad:#bd3636;
+  --chip:#e6ebf3; --focus:#0e7480;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --term-bg:#0e1520; --term-fg:#d5deec; --term-dim:#8d9bb0; --term-ok:#7bdc9a; --term-hl:#f5cf6b; --term-bad:#ff7d7d; --term-note:#7ec8f0; --term-prompt:#7bdc9a;
+  --tui-bg:#0b0b9c; --tui-bar:#b4b4b4; --tui-dlg:#bdbdbd; --tui-ink:#101010; --tui-sel:#0b0b9c;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1119; --surface:#131b27; --ink:#e7edf6; --muted:#95a4b8; --line:#243246;
+  --accent:#f0893a; --accent-ink:#1a0f05; --teal:#4cc0cd; --ok:#52c585; --warn:#e6a43c; --bad:#ff7b7b;
+  --chip:#1c2738; --focus:#4cc0cd; --term-bg:#080d14; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0b1119; --surface:#131b27; --ink:#e7edf6; --muted:#95a4b8; --line:#243246;
+  --accent:#f0893a; --accent-ink:#1a0f05; --teal:#4cc0cd; --ok:#52c585; --warn:#e6a43c; --bad:#ff7b7b;
+  --chip:#1c2738; --focus:#4cc0cd; --term-bg:#080d14; color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:18px 40px}
+.app{max-width:1180px;margin-inline:auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.55rem;line-height:1.2;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:1.15rem;margin:0 0 6px;font-weight:600;text-wrap:balance}
+h3{font-size:.8rem;margin:0 0 6px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+p{margin:0 0 8px}
+.top{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;align-items:flex-start}
+.sub{color:var(--muted);margin:4px 0 0;max-width:62ch}
+.badges{display:flex;flex-wrap:wrap;gap:8px}
+.badge{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
+.badge.alt{background:var(--chip);color:var(--ink)}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--muted);font-size:.9rem}
+.note b{color:var(--ink)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.tab{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:9px 14px;font:inherit;font-weight:500;cursor:pointer}
+.tab .n{color:var(--muted);margin-right:6px;font-variant-numeric:tabular-nums}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected="true"] .n{color:var(--bg);opacity:.7}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.panel{display:none}.panel.on{display:block}
+.grid2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+.grid2.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:860px){.grid2,.grid2.even{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card.flat{background:transparent;border-style:dashed}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+.btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:8px 14px;cursor:pointer}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.pill{display:inline-block;font-size:.74rem;font-weight:600;padding:2px 9px;border-radius:999px;color:#fff}
+.pill.ok{background:var(--ok)}.pill.warn{background:var(--warn)}.pill.bad{background:var(--bad)}.pill.off{background:#6b778a}
+.coach ul{margin:0 0 10px;padding-left:18px}.coach li{margin-bottom:4px}
+.callout{border-radius:8px;padding:8px 12px;font-size:.9rem;margin-top:8px;border:1px solid var(--line);background:var(--chip)}
+.callout.ok{border-color:var(--ok)}.callout.warn{border-color:var(--warn)}.callout.bad{border-color:var(--bad)}
+.step{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem}
+.dots{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 10px}
+.dots i{width:22px;height:5px;border-radius:3px;background:var(--line)}.dots i.on{background:var(--accent)}.dots i.cur{background:var(--ink)}
+
+/* text-mode (installer, xsconsole) */
+.tui{background:var(--tui-bg);color:#fff;font-family:var(--font-mono);font-size:14px;line-height:1.45;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;min-height:400px;border:1px solid #000}
+.tui .bar{background:var(--tui-bar);color:#000;padding:2px 10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tui .foot{background:var(--tui-bar);color:#7a0000;padding:2px 10px;font-weight:600;font-size:12px}
+.tui .hint{color:#fff;padding:2px 12px}
+.tui .area{flex:1;display:flex;align-items:center;justify-content:center;padding:18px 10px;overflow-x:auto}
+.dlg{background:var(--tui-dlg);color:var(--tui-ink);width:min(100%,560px);padding:6px;box-shadow:8px 8px 0 rgba(0,0,40,.55)}
+.dlg .in{border:2px solid #fff;padding:10px 14px 12px}
+.dlg .tt{text-align:center;color:var(--tui-sel);font-weight:600;margin-bottom:10px}
+.dlg p{margin:0 0 6px}
+.dlg .opt{display:block;width:100%;text-align:left;background:transparent;border:0;font:inherit;color:inherit;padding:1px 6px;cursor:pointer}
+.dlg .opt[aria-pressed="true"]{background:var(--tui-sel);color:#fff}
+.dlg .btns{display:flex;gap:14px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.tbtn{font:inherit;font-weight:600;background:transparent;border:0;color:var(--tui-ink);padding:1px 8px;cursor:pointer}
+.tbtn.pri{background:var(--tui-sel);color:#fff}
+.tbtn:disabled{opacity:.45;cursor:not-allowed}
+.tin{font:inherit;background:#fff;color:#000;border:0;padding:0 4px;width:15ch;max-width:100%}
+.frow{display:flex;gap:8px;align-items:center;margin:2px 0;flex-wrap:wrap}.frow label{min-width:15ch}
+.bootlog{font-family:var(--font-mono);font-size:13px;color:#fff;padding:14px;white-space:pre-wrap}
+.prog{height:14px;background:#6e6e6e;border:1px solid #fff;margin:10px 0}.prog i{display:block;height:100%;background:var(--tui-sel);width:0}
+
+/* terminal */
+.term{background:var(--term-bg);border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.term .tb{display:flex;justify-content:space-between;gap:10px;padding:7px 12px;background:rgba(255,255,255,.06);color:var(--term-dim);font-size:.78rem;font-family:var(--font-ui)}
+.term .out{font-family:var(--font-mono);font-size:13px;line-height:1.5;color:var(--term-fg);padding:10px 12px;height:330px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.out .c{color:#fff;font-weight:600}.out .p{color:var(--term-prompt);font-weight:600}.out .h{color:var(--term-hl)}.out .e{color:var(--term-bad)}.out .g{color:var(--term-ok)}.out .n{color:var(--term-note)}.out .w{color:#ffb454;font-weight:600}
+.term .inrow{display:flex;gap:8px;border-top:1px solid rgba(255,255,255,.1);padding:8px 12px;align-items:center;font-family:var(--font-mono);font-size:13px}
+.term .inrow span{color:var(--term-prompt);font-weight:600;white-space:nowrap}
+.term input{flex:1;min-width:0;background:transparent;border:0;color:#fff;font:inherit;outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{font-family:var(--font-mono);font-size:11.5px;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip:hover{border-color:var(--accent)}
+.chip.act{border-color:var(--teal);color:var(--teal);font-family:var(--font-ui);font-weight:600}
+
+/* scenario list + goals */
+.scn{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.scn button{font:inherit;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 12px;cursor:pointer}
+.scn button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.scn .k{font-size:.72rem;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
+.goals{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.goals li{display:flex;gap:10px;align-items:flex-start}
+.goals .box{flex:0 0 18px;height:18px;border:2px solid var(--muted);border-radius:4px;margin-top:2px;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--accent-ink)}
+.goals li.done .box{background:var(--ok);border-color:var(--ok)}
+.goals li.done span{color:var(--muted);text-decoration:line-through}
+.say{border-left:0;background:var(--chip);border-radius:8px;padding:10px 12px;font-style:italic}
+
+/* XO view */
+.xo{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.xo .hd{background:#1c2a44;color:#fff;padding:7px 12px;font-size:.8rem;display:flex;justify-content:space-between;gap:10px}
+.xo .bn{padding:9px 12px;font-weight:600;font-size:.9rem;color:#fff}
+.xo .bn.ok{background:var(--ok)}.xo .bn.warn{background:var(--warn)}.xo .bn.bad{background:var(--bad)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--chip);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+td.wrap,th.wrap{white-space:normal}
+
+/* XO Lite mock */
+.lite{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.lite .url{display:flex;gap:10px;align-items:center;padding:8px 12px;background:var(--chip);font-family:var(--font-mono);font-size:.8rem;color:var(--muted);border-bottom:1px solid var(--line)}
+.lite .url b{color:var(--ink);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lite .shell{display:grid;grid-template-columns:150px minmax(0,1fr);min-height:380px}
+@media (max-width:640px){.lite .shell{grid-template-columns:minmax(0,1fr)}.lite .side{display:flex;overflow-x:auto}}
+.lite .side{background:#1c2a44;color:#c8d4ea;padding:10px 0}
+.lite .side div{padding:9px 16px;font-size:.9rem;white-space:nowrap}.lite .side div.on{background:rgba(255,255,255,.12);color:#fff}
+.lite .main{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.meter{height:9px;border-radius:5px;background:var(--line);overflow:hidden}.meter i{display:block;height:100%;background:var(--teal)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kv .tile{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kv .tile b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.form{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:.82rem;color:var(--muted);font-weight:500}
+.form input,.form select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+.overlay{padding:22px;text-align:center}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface)}
+a{color:var(--teal)}
+details+details{margin-top:8px}summary{cursor:pointer;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>XCP-ng for VMware Engineers: Virtual Lab</h1>
+      <p class="sub">A small lesson for vSphere engineers moving to the Vates stack (XCP-ng + Xen Orchestra). Install a host, log in over SSH, then resolve six common support cases with the same commands you would run on a real host. Each case maps to its VMware twin and links to the official Vates / XCP-ng documentation. Nothing here touches a real system.</p>
+    </div>
+    <div class="badges"><span class="badge">Simulation</span><span class="badge alt">Modelled on XCP-ng 8.3 LTS</span></div>
+  </header>
+  <div class="note" role="note"><b>Read this once.</b> These screens are reconstructions made from public documentation, not captures of a real host, and the log wording is illustrative. Use the lab to learn the flow and the commands, then confirm each command with <code>xe help &lt;command&gt;</code> on a real lab host before using it in production. Source and lesson notes: <a href="https://github.com/gomadanyvickdistelpika/xcpng-for-vmware-engineers">GitHub repository</a>.</div>
+
+  <nav class="tabs" role="tablist" aria-label="Lab stages">
+    <button class="tab" role="tab" data-tab="install" aria-selected="true"><span class="n">1</span>Install</button>
+    <button class="tab" role="tab" data-tab="console" aria-selected="false"><span class="n">2</span>Host console</button>
+    <button class="tab" role="tab" data-tab="lite" aria-selected="false"><span class="n">3</span>XO Lite</button>
+    <button class="tab" role="tab" data-tab="cases" aria-selected="false"><span class="n">4</span>Six cases</button>
+    <button class="tab" role="tab" data-tab="card" aria-selected="false"><span class="n">5</span>Resolutions &amp; docs</button>
+  </nav>
+
+  <main>
+    <section id="tab-install" class="panel on" aria-label="Install XCP-ng"></section>
+    <section id="tab-console" class="panel" aria-label="Host console"></section>
+    <section id="tab-lite" class="panel" aria-label="XO Lite"></section>
+    <section id="tab-cases" class="panel" aria-label="Six cases"></section>
+    <section id="tab-card" class="panel" aria-label="Case resolutions and official documentation"></section>
+  </main>
+</div>
+
+<script>
+/* ===== Lab engine: simulated shell + scenarios (pure JS, no DOM) ===== */
+const RW = new Set(["name-label", "name-description"]);
+
+function splitQuoted(str, sep) {
+  const parts = []; let cur = ""; let q = null;
+  for (const ch of str) {
+    if (q) { if (ch === q) q = null; cur += ch; }
+    else if (ch === '"' || ch === "'") { q = ch; cur += ch; }
+    else if (ch === sep) { parts.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  parts.push(cur);
+  return parts;
+}
+function tokens(str) {
+  const out = []; let cur = ""; let q = null;
+  for (const ch of str.trim()) {
+    if (q) { if (ch === q) q = null; else cur += ch; }
+    else if (ch === '"' || ch === "'") q = ch;
+    else if (/\s/.test(ch)) { if (cur) { out.push(cur); cur = ""; } }
+    else cur += ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function parseCmd(s) {
+  const argv = tokens(s);
+  const kv = {}; const flags = []; const words = [];
+  argv.forEach((t, i) => {
+    if (i === 0) return;
+    const m = t.match(/^([A-Za-z][\w:-]*)=(.*)$/);
+    if (m) kv[m[1]] = m[2];
+    else if (t.startsWith("-")) flags.push(t);
+    else words.push(t);
+  });
+  return { argv, name: argv[0] || "", sub: words[0] || "", kv, flags, words };
+}
+function idMatch(arg, full) { return !!arg && arg.length >= 8 && full.startsWith(arg); }
+function fmtRecs(recs, kv, flags) {
+  const f = recs.filter(r => Object.entries(kv).every(([k, v]) => {
+    if (k === "params") return true;
+    if (!(k in r)) return true;
+    if (k.endsWith("uuid") || k === "uuid") return idMatch(v, String(r[k])) || String(r[k]) === v;
+    return String(r[k]) === v;
+  }));
+  if (flags.includes("--minimal")) return [["o", f.map(r => r.uuid).join(",")]];
+  const params = kv.params ? (kv.params === "all" ? null : kv.params.split(",")) : null;
+  const out = [];
+  f.forEach(r => {
+    const keys = params ? ["uuid", ...params.filter(k => k in r && k !== "uuid")] : Object.keys(r);
+    keys.forEach(k => { if (k in r) out.push(["o", (k + " ( " + (RW.has(k) ? "RW" : "RO") + ")").padEnd(26) + ": " + r[k]]); });
+    out.push(["o", ""]);
+  });
+  return out;
+}
+function sizeToBytes(s) {
+  const m = String(s).match(/^(\d+(?:\.\d+)?)\s*(GiB|MiB|KiB|B)?$/i);
+  if (!m) return NaN;
+  const n = parseFloat(m[1]); const u = (m[2] || "B").toLowerCase();
+  return Math.round(n * ({ gib: 2 ** 30, mib: 2 ** 20, kib: 1024, b: 1 }[u]));
+}
+const GIB = 2 ** 30;
+function ipToInt(ip) { const p = String(ip).split("."); if (p.length !== 4) return NaN; let n = 0; for (const x of p) { if (!/^\d+$/.test(x) || +x > 255) return NaN; n = n * 256 + (+x); } return n; }
+function sameNet(a, b, mask) { const A = ipToInt(a), B = ipToInt(b), M = ipToInt(mask); if ([A, B, M].some(Number.isNaN)) return false; return (A & M) === (B & M); }
+function validMask(m) { const n = ipToInt(m); if (Number.isNaN(n)) return false; const inv = (~n) >>> 0; return (inv & (inv + 1)) === 0; }
+
+/* ----------------------------------------------------------------- scenarios */
+const FREE = {
+  id: "free", prompt: (s) => "[root@" + (s.host || "xcpng-lab1") + " ~]#",
+  init: (lab) => ({ ip: lab.ip, mask: lab.mask, gw: lab.gw, host: lab.host, mode: lab.ipMode, pif: "6c0e41b9-2f73-4d58-8a10-b7e5c9d3a122" }),
+  logs: (s) => ({}),
+  goals: [],
+  chips: ["xe host-list params=name-label,uuid,memory-total,memory-free", "xl info | grep -E \"virt_caps|xen_version\"", "ip -br a", "PIF=$(xe pif-list management=true --minimal)", "xe pif-list management=true params=device,IP,IP-configuration-mode", "xe pif-reconfigure-ip uuid=$PIF mode=static IP=192.168.50.20 netmask=255.255.255.0 gateway=192.168.50.1 DNS=1.1.1.1", "xe-toolstack-restart", "xe sr-list params=name-label,type,uuid"],
+  handle(c, s, T) {
+    const { name, sub, kv, flags } = c.p;
+    if (c.line.startsWith("ip -br a")) {
+      return [["o", "lo               UNKNOWN        127.0.0.1/8"], ["o", "eth0             UP"],
+        ["o", ("xenbr0           UP             " + (s.mode === "dhcp" && !s.dhcpOk ? "" : s.ip + "/" + maskToPrefix(s.mask))).trimEnd()],
+        ["n", s.mode === "dhcp" && !s.dhcpOk ? "# xenbr0 has no IPv4 address: the management IP is missing (no DHCP on a direct cable)" : "# the management IP sits on xenbr0, the bridge on top of eth0"]];
+    }
+    if (name === "xe" && sub === "host-list") return fmtRecs([{ uuid: "8c3d7f0a-1b52-4e90-b3f7-2a9d51c0e6a4", "name-label": s.host, "memory-total": 4294967296, "memory-free": 3861286912, enabled: "true" }], kv, flags);
+    if (name === "xl" && sub === "info") return [["o", "host                   : " + s.host], ["o", "xen_version            : 4.17.5-xcp"], ["g", "virt_caps              : hvm hvm_directio"], ["o", "total_memory           : 4095"], ["o", "free_memory            : 3682"]];
+    if (name === "xe" && sub === "pif-list") {
+      const rec = { uuid: s.pif, device: "eth0", management: "true", IP: s.mode === "dhcp" && !s.dhcpOk ? "" : s.ip, "IP-configuration-mode": s.mode === "dhcp" ? "DHCP" : "Static" };
+      if (kv.management && kv.management !== "true") return [];
+      T.goal("seeip");
+      return fmtRecs([rec], kv, flags);
+    }
+    if (name === "xe" && sub === "pif-reconfigure-ip") {
+      if (!idMatch(kv.uuid, s.pif)) return [["e", "Error: The uuid you supplied was invalid. (check $PIF)"]];
+      if (kv.mode !== "static" && kv.mode !== "dhcp") return [["e", "Error: mode must be static or dhcp"]];
+      if (kv.mode === "static") {
+        if (!kv.IP || !kv.netmask) return [["e", "Error: IP and netmask are required for static mode"]];
+        if (String(kv.netmask).includes("/")) return [["e", "Error: netmask must be dotted (255.255.255.0), not a /prefix"], ["n", "# the xe command wants dotted form; the installer screen may ask for something different. Read the field label."]];
+        if (!validMask(kv.netmask) || Number.isNaN(ipToInt(kv.IP))) return [["e", "Error: invalid IP address or netmask"]];
+        s.mode = "static"; s.ip = kv.IP; s.mask = kv.netmask; s.gw = kv.gateway || s.gw; T.syncLab({ ip: s.ip, mask: s.mask, gw: s.gw, ipMode: "static" });
+        T.goal("static");
+        return [["n", "# applied. Over SSH on this same link your session would drop here; do this on the console."], ["n", "# NOW VERIFY: xe pif-list management=true params=device,IP,IP-configuration-mode"]];
+      }
+      s.mode = "dhcp"; s.dhcpOk = false; T.syncLab({ ipMode: "dhcp" });
+      return [["n", "# DHCP selected. With no DHCP server on a direct cable there will be no address."]];
+    }
+    if (name === "xe-toolstack-restart") { T.goal("restart"); return [["o", "Executing xe-toolstack-restart"], ["o", "Stopping xapi:                                      [  OK  ]"], ["o", "Starting xapi:                                      [  OK  ]"], ["g", "# running VMs were not touched: only the management layer restarted"]]; }
+    if (name === "xe" && sub === "sr-list") return fmtRecs([{ uuid: "e1c2f0a7-9d44-4b1e-8f2a-3a5c7d9b1e60", "name-label": "Local storage", type: "ext" }, { uuid: "f3b8a6d2-1c05-47ea-9e11-52d0c4b7a8f9", "name-label": "Local ISO", type: "iso" }], kv, flags);
+    if (name === "lspci") return [["o", "02:00.0 Ethernet controller [0200]: Intel Corporation Ethernet Connection I219-LM [8086:15bb]"]];
+    if (name === "ping") { const tgt = c.p.words[c.p.words.length - 1]; return sameNet(tgt, s.ip, s.mask) || tgt === s.gw ? [["o", "64 bytes from " + tgt + ": icmp_seq=1 ttl=64 time=0.4 ms"], ["g", "1 packets transmitted, 1 received, 0% packet loss"]] : [["e", "1 packets transmitted, 0 received, 100% packet loss"]]; }
+    return undefined;
+  },
+};
+function maskToPrefix(m) { const n = ipToInt(m); if (Number.isNaN(n)) return 24; let c = 0; for (let i = 31; i >= 0; i--) if ((n >>> i) & 1) c++; else break; return c; }
+
+/* ---- Case 1 */
+const VMW1 = "7c1e0a52-3b6d-4d2f-9a64-5f0d1c2e8b11", VMD1 = "3e9a41c7-5d20-4b8f-a1e6-9c07d2b45f10";
+const CASE1 = {
+  id: "c1", title: "Stale power state", host: "xcpng-lab1",
+  ticket: "\"Xen Orchestra shows my VM as Running. It is not, and I cannot start or stop it.\"",
+  twin: "vCenter shows a VM in a wrong or invalid state, so you restart hostd and vpxa on the ESXi host.",
+  why: "XAPI's database got out of step with what Xen really runs: the register says present, the seat is empty.",
+  say: "Compare xl list with xe vm-list, then restart the toolstack: it is the hostd/vpxa restart of XCP-ng and does not touch running VMs.",
+  prompt: () => "[root@xcpng-lab1 ~]#",
+  init: () => ({ xapiRunning: true, vmlist: false, xl: false, log: false }),
+  goals: [{ id: "compare", text: "Compare what XAPI believes (xe vm-list) with what Xen runs (xl list)", hint: "Run both: xe vm-list, then xl list. If they disagree, XAPI is stale." }, { id: "log", text: "Read /var/log/xensource.log for the VM", hint: "tail or grep the VM uuid in /var/log/xensource.log." }, { id: "fix", text: "Fix safely: restart the toolstack (or reset the power state after proving it is off)", hint: "xe-toolstack-restart is safe for running VMs. vm-reset-powerstate only after xl list proves the VM is off." }],
+  chips: ["xe vm-list params=name-label,power-state", "xl list", "grep 7c1e0a52 /var/log/xensource.log | tail -3", "xe-toolstack-restart", "xe vm-reset-powerstate uuid=7c1e0a52-3b6d-4d2f-9a64-5f0d1c2e8b11 --force", "xe vm-list params=name-label,power-state"],
+  logs: (s) => ({ "/var/log/xensource.log": [["o", "Oct  6 09:12:38 xcpng-lab1 xapi: [ info] VM.start_on succeeded for app-db01 (simulated)"], ["e", "Oct  6 09:12:41 xcpng-lab1 xenopsd-xc: [error] VM 7c1e0a52 not found in xenopsd (simulated)"], ["e", "Oct  6 09:12:41 xcpng-lab1 xapi: [error] VM.hard_shutdown 7c1e0a52: power state out of sync (simulated)"], ["o", "Oct  6 09:13:02 xcpng-lab1 xapi: [ warn] retrying VM state update (simulated)"]] }),
+  handle(c, s, T) {
+    const { name, sub, kv, flags } = c.p;
+    const recs = () => [{ uuid: VMW1, "name-label": "app-web01", "power-state": s.xapiRunning ? "running" : "halted" }, { uuid: VMD1, "name-label": "app-db01", "power-state": "running" }];
+    if (name === "xe" && sub === "vm-list") { s.vmlist = true; if (s.xl) T.goal("compare"); return fmtRecs(recs(), kv, flags); }
+    if (name === "xl" && sub === "list") { s.xl = true; if (s.vmlist) T.goal("compare"); return [["o", "Name                     ID   Mem VCPUs  State   Time(s)"], ["o", "Domain-0                  0  2048     4  r-----    912.4"], ["o", "app-db01                  3  4096     2  -b----    210.7"], ["h", "# app-web01 is NOT here: Xen says it is not running"]]; }
+    if (name === "xe-toolstack-restart") { s.xapiRunning = false; T.goal("fix"); return [["o", "Executing xe-toolstack-restart"], ["o", "Stopping xapi:                                      [  OK  ]"], ["o", "Starting xapi:                                      [  OK  ]"], ["g", "# XAPI re-reads the real state from Xen. Running VMs were not touched."]]; }
+    if (name === "xe" && sub === "vm-reset-powerstate") {
+      if (!idMatch(kv.uuid, VMW1)) return [["e", "Error: unknown VM uuid"]];
+      if (kv.force !== "true" && !flags.includes("--force")) return [["e", "Error: this needs --force (or force=true)"]];
+      if (!s.xl) T.warn("You reset the record without proving the VM is off. Run xl list first: if the VM were still running, two copies could write to one disk.");
+      s.xapiRunning = false; if (s.xl) T.goal("fix"); return [["g", "(record updated: power-state is now halted)"]];
+    }
+    return undefined;
+  },
+  onLog(file, s, T) { if (file === "/var/log/xensource.log") T.goal("log"); },
+  xo(s) { return xoView("Virtual machines", ["Name", "State", "Host", "Console"], [["app-web01", s.xapiRunning ? ["Running", "ok"] : ["Halted", "off"], "xcpng-lab1", s.xapiRunning ? ["no signal", "off"] : "-"], ["app-db01", ["Running", "ok"], "xcpng-lab1", ["ok", "ok"]]], s.xapiRunning ? ["warn", "app-web01 says Running but cannot be stopped or started"] : ["ok", "State repaired: app-web01 is Halted"]); },
+};
+
+/* ---- Case 2 */
+const CASE2 = {
+  id: "c2", title: "Pool master lost", host: "xcpng-h2",
+  ticket: "\"Our pool master crashed. The VMs on the other hosts still run, but XO cannot manage the pool.\"",
+  twin: "vSphere HA elects a new primary host. If vCenter is down you use each host's Host Client.",
+  why: "One host is the pool master and holds the pool database. With HA on, the pool re-elects a master. With HA off, you promote a member by hand, and only if the old master is truly dead.",
+  say: "Prove the old master (pool coordinator) is really dead, promote one member, point the others at it, check the default SR, and only then bring the old host back.",
+  prompt: () => "[root@xcpng-h2 ~]#",
+  init: () => ({ ping: false, promoted: false, recovered: false }),
+  goals: [{ id: "ping", text: "Prove the old master is really dead (ping, logs)", hint: "ping -c 2 192.168.50.20 (the master)." }, { id: "xha", text: "Read /var/log/xha.log for heartbeat and fencing", hint: "tail -5 /var/log/xha.log" }, { id: "promote", text: "Promote this member only after proof", hint: "xe pool-emergency-transition-to-master" }, { id: "recover", text: "Point the other members at the new master (coordinator)", hint: "xe pool-recover-slaves on the new master, or xe pool-emergency-reset-master master-address=<new master> on each member" }],
+  chips: ["ping -c 2 192.168.50.20", "xe host-list params=name-label,enabled", "tail -5 /var/log/xha.log", "xl list", "xe pool-emergency-transition-to-master", "xe pool-recover-slaves", "xe pool-emergency-reset-master master-address=192.168.50.21", "xe host-list params=name-label,enabled"],
+  logs: () => ({ "/var/log/xha.log": [["h", "xhad: [ warn] heartbeat lost from host 8c3d7f0a (simulated)"], ["h", "xhad: [ info] this host is a survivor; waiting for master (simulated)"], ["o", "xhad: [ info] no fencing event on this host (simulated)"]] }),
+  handle(c, s, T) {
+    const { name, sub, kv, flags } = c.p;
+    if (name === "ping") { const t = c.p.words[c.p.words.length - 1]; if (t === "192.168.50.20") { s.ping = true; T.goal("ping"); return [["e", "2 packets transmitted, 0 received, 100% packet loss"]]; } return [["o", "64 bytes from " + t + ": icmp_seq=1 ttl=64 time=0.5 ms"]]; }
+    if (name === "xe" && (sub === "host-list" || sub === "pool-list")) {
+      if (!s.promoted) return [["e", "Error: cannot contact the pool master (wording varies by version)"], ["n", "# the member is in emergency mode: it cannot manage the pool"]];
+      const hosts = [{ uuid: "2f6b9d14-7e30-4c8a-91b5-d0a4e3c7f812", "name-label": "xcpng-h2", enabled: "true" }];
+      if (s.recovered) hosts.push({ uuid: "b9d17e45-3a28-4f06-8c1d-6e2f5a90b3c4", "name-label": "xcpng-h3", enabled: "true" }, { uuid: "8c3d7f0a-1b52-4e90-b3f7-2a9d51c0e6a4", "name-label": "xcpng-h1", enabled: "false" });
+      return fmtRecs(hosts, kv, flags);
+    }
+    if (name === "xl" && sub === "list") return [["o", "Name                     ID   Mem VCPUs  State   Time(s)"], ["o", "Domain-0                  0  2048     4  r-----    402.1"], ["g", "app-db01                  2  4096     2  -b----    188.9   (still alive on this member)"]];
+    if (name === "xe" && sub === "pool-emergency-transition-to-master") {
+      if (!s.ping) T.warn("You promoted this host without proving the old master is dead. If it is still alive you now have two masters.");
+      s.promoted = true; T.goal("promote"); return [["o", "Host agent will restart and transition to master in 10 seconds..."]];
+    }
+    if (name === "xe" && sub === "pool-emergency-reset-master") { if (!s.promoted) return [["e", "Error: promote a member first with xe pool-emergency-transition-to-master"]]; s.recovered = true; T.goal("recover"); return [["g", "(run on each other member: it now points to the new coordinator)"]]; }
+    if (name === "xe" && sub === "pool-recover-slaves") { if (!s.promoted) return [["e", "Error: this host is not the pool master. Promote it first."]]; s.recovered = true; T.goal("recover"); return [["g", "(other members now point to this host)"]]; }
+    if (name === "xe" && sub === "host-emergency-ha-disable") return [["o", "(HA disabled on this host, simulated)"]];
+    return undefined;
+  },
+  onLog(file, s, T) { if (file === "/var/log/xha.log") T.goal("xha"); },
+  xo(s) {
+    const rows = s.promoted ? [["xcpng-h1", "member", ["Unreachable", "bad"]], ["xcpng-h2", ["master", "warn"], ["Running", "ok"]], ["xcpng-h3", "member", ["Running", "ok"]]] : [["xcpng-h1", ["master", "warn"], ["Unreachable", "bad"]], ["xcpng-h2", "member", ["Running", "ok"]], ["xcpng-h3", "member", ["Running", "ok"]]];
+    return xoView("Hosts in pool PROD-A", ["Host", "Role", "Status"], rows, s.promoted ? ["ok", "xcpng-h2 is the new master. Old master xcpng-h1 stays out until checked."] : ["bad", "Pool master unreachable: cannot manage the pool"]);
+  },
+};
+
+/* ---- Case 3 */
+const SR3 = "5d2c91ab-77f0-4c2e-8a1d-0f3e6b9c2d44";
+const SNAPS = [["a1f04c2e-81b3-4d9a-b7c0-1e5d9f3a2b60", "backup snap 24"], ["b2e15d3f-92c4-4eab-c8d1-2f6e0a4b3c71", "backup snap 25"], ["c3f26e40-a3d5-4fbc-d9e2-307f1b5c4d82", "backup snap 26"], ["d4037f51-b4e6-40cd-eaf3-41802c6d5e93", "backup snap 27"]];
+const CASE3 = {
+  id: "c3", title: "Backup skipped (coalesce)", host: "xcpng-lab1",
+  ticket: "\"Our backup job says skipped: the VDI chain is too long or unhealthy.\"",
+  twin: "\"Virtual machine disks consolidation is needed\" after snapshot-based backups.",
+  why: "Each backup takes a snapshot. Deleting old snapshots makes XCP-ng merge (coalesce) the disks. If snapshots come faster than merges, the chain grows toward a limit of about 30, and XO skips the backup on purpose.",
+  say: "Coalesce is snapshot consolidation: check SMlog and SR free space, let the merge finish, and reduce snapshot frequency. A skipped run is XO protecting the SR, not a failure.",
+  prompt: () => "[root@xcpng-lab1 ~]#",
+  init: () => ({ chain: 28, snaps: SNAPS.map(x => x.slice()), read1: false, deleted: 0 }),
+  goals: [{ id: "smlog", text: "Read SMlog for coalesce / SMGC lines", hint: "tail -f /var/log/SMlog | grep -i -E \"coalesce|SMGC\"" }, { id: "list", text: "List the snapshots in the chain", hint: "xe snapshot-list params=name-label,uuid" }, { id: "del", text: "Delete an old snapshot so XCP-ng can merge", hint: "xe snapshot-uninstall snapshot-uuid=<uuid> force=true" }, { id: "after", text: "Re-read SMlog and see the chain shrink", hint: "Read SMlog again after deleting." }],
+  chips: ["tail -f /var/log/SMlog | grep -i -E \"coalesce|SMGC\"", "xe snapshot-list params=name-label,uuid", "xe vdi-list sr-uuid=5d2c91ab params=name-label,is-a-snapshot", "xe sr-scan uuid=5d2c91ab-77f0-4c2e-8a1d-0f3e6b9c2d44", "xe snapshot-uninstall snapshot-uuid=a1f04c2e-81b3-4d9a-b7c0-1e5d9f3a2b60 force=true", "xe snapshot-uninstall snapshot-uuid=b2e15d3f-92c4-4eab-c8d1-2f6e0a4b3c71 force=true"],
+  logs(s) {
+    const L = [["o", "SMGC: [11873] Found 1 orphan VDIs"], ["o", "SMGC: [11873] Coalescing *a1b2c3d4(40.000G/12.4G) -> *e5f6a7b8 (simulated)"]];
+    if (s.chain >= 20) { L.push(["h", "SMGC: [11873] GC active: waiting for coalesce to finish"], ["o", "SMGC: [11873] Chain length " + s.chain + " (limit about 30) (simulated)"]); }
+    else { L.push(["g", "SMGC: [11873] Coalesce done, chain length " + s.chain + " (simulated)"]); }
+    return { "/var/log/SMlog": L };
+  },
+  handle(c, s, T) {
+    const { name, sub, kv, flags } = c.p;
+    if (name === "xe" && sub === "snapshot-list") { T.goal("list"); return fmtRecs(s.snaps.map(x => ({ uuid: x[0], "name-label": x[1] })), kv, flags); }
+    if (name === "xe" && sub === "vdi-list") { return fmtRecs([{ uuid: "e5f6a7b8-1111-4222-8333-944455566677", "name-label": "app-web01 disk 0", "is-a-snapshot": "false" }, ...s.snaps.map(x => ({ uuid: x[0], "name-label": x[1], "is-a-snapshot": "true" }))], {}, flags).concat([["n", "# many snapshots in a chain = slow merges = XO skips the backup"]]); }
+    if (name === "xe" && sub === "sr-scan") return [["o", "(scan started; the garbage collector will coalesce in the background)"]];
+    if (name === "xe" && sub === "sr-list") return fmtRecs([{ uuid: SR3, "name-label": "Local storage", type: "ext" }], kv, flags);
+    if (name === "xe" && sub === "snapshot-uninstall") {
+      const i = s.snaps.findIndex(x => idMatch(kv["snapshot-uuid"], x[0]));
+      if (i < 0) return [["e", "Error: snapshot not found. Use xe snapshot-list to copy a uuid."]];
+      s.snaps.splice(i, 1); s.chain = Math.max(4, s.chain - 12); s.deleted++; T.goal("del");
+      return [["g", "(snapshot removed; coalesce will merge the disks, chain length now about " + s.chain + ")"]];
+    }
+    if (name === "xe" && sub === "vdi-destroy") { T.warn("Never delete disks by hand in a chain. Let the coalesce finish."); return [["e", "Refused (simulated): deleting a base disk would break the chain."]]; }
+    return undefined;
+  },
+  onLog(file, s, T) { if (file === "/var/log/SMlog") { T.goal(s.deleted > 0 ? "after" : "smlog"); if (s.deleted === 0) s.read1 = true; } },
+  xo(s) { const ok = s.chain < 20; return xoView("Backup jobs", ["Job", "VM", "Result"], [["Nightly-01", "app-web01", ok ? ["Success", "ok"] : ["Skipped", "warn"]], ["Nightly-01", "app-db01", ["Success", "ok"]]], ok ? ["ok", "Chain healthy (" + s.chain + "): backups run again"] : ["warn", "Skipped: unhealthy VDI chain (" + s.chain + " long, coalesce still running)"]); },
+};
+
+/* ---- Case 4 */
+const PBD4 = "9a41f6e2-0c3b-4d7a-b5e8-71d2c3a4f099";
+const CASE4 = {
+  id: "c4", title: "SR disconnected", host: "xcpng-lab1",
+  ticket: "\"Our shared storage shows as disconnected and the VMs on it will not start.\"",
+  twin: "A datastore inaccessible or All Paths Down. You read vmkernel.log and check paths with esxcli storage core path list.",
+  why: "An SR (storage repository, the datastore) is attached to each host by a PBD. If the PBD is unplugged, the host cannot see the SR, often because of a network or NFS or iSCSI problem.",
+  say: "Find why the PBD is detached, prove reachability to the storage server, fix the cause, then plug it back. Never unplug an SR with running VMs.",
+  prompt: () => "[root@xcpng-lab1 ~]#",
+  init: () => ({ plugged: false, nfsUp: false, pbd: false, ping: false, log: false }),
+  goals: [{ id: "pbd", text: "Find the detached PBD (currently-attached false)", hint: "xe pbd-list sr-uuid=5d2c91ab" }, { id: "reach", text: "Prove whether the host can reach the storage server", hint: "ping -c 1 192.168.50.5 ; showmount -e 192.168.50.5" }, { id: "smlog", text: "Read SMlog for the mount error", hint: "tail -4 /var/log/SMlog" }, { id: "plug", text: "Fix the cause first, then re-plug", hint: "Use the \"storage team fixes NFS\" button, then xe pbd-plug." }],
+  chips: ["xe sr-list params=name-label,uuid,type", "xe pbd-list sr-uuid=5d2c91ab params=uuid,currently-attached", "ping -c 1 192.168.50.5", "showmount -e 192.168.50.5", "tail -4 /var/log/SMlog", "xe pbd-plug uuid=9a41f6e2-0c3b-4d7a-b5e8-71d2c3a4f099", "xe pbd-list sr-uuid=5d2c91ab params=currently-attached"],
+  actions: [{ label: "Ask storage team to restart the NFS server (simulated)", run(s, T) { s.nfsUp = true; T.print([["n", "# storage team: NFS server back online (simulated)"]]); } }],
+  logs: (s) => ({ "/var/log/SMlog": s.nfsUp && s.plugged ? [["g", "SM: [8890] NFSSR.attach: mounted 192.168.50.5:/export/prod (simulated)"]] : [["h", "SM: [8812] NFSSR.load: EXCEPTION unable to mount server (simulated)"], ["e", "SM: [8812] Unable to connect to NFS server 192.168.50.5 (simulated)"]] }),
+  handle(c, s, T) {
+    const { name, sub, kv, flags } = c.p;
+    if (name === "xe" && sub === "sr-list") return fmtRecs([{ uuid: "5d2c91ab-77f0-4c2e-8a1d-0f3e6b9c2d44", "name-label": "NFS-prod", type: "nfs" }, { uuid: "e1c2f0a7-9d44-4b1e-8f2a-3a5c7d9b1e60", "name-label": "Local storage", type: "ext" }], kv, flags);
+    if (name === "xe" && sub === "pbd-list") { if (!s.plugged) T.goal("pbd"); return fmtRecs([{ uuid: PBD4, "host-name-label": "xcpng-lab1", "sr-uuid": "5d2c91ab-77f0-4c2e-8a1d-0f3e6b9c2d44", "currently-attached": s.plugged ? "true" : "false" }], kv, flags); }
+    if (name === "ping") { const t = c.p.words[c.p.words.length - 1]; if (t === "192.168.50.5") { T.goal("reach"); return s.nfsUp ? [["g", "1 packets transmitted, 1 received, 0% packet loss"]] : [["e", "1 packets transmitted, 0 received, 100% packet loss"]]; } return [["o", "64 bytes from " + t + ": ok"]]; }
+    if (name === "showmount") { T.goal("reach"); return s.nfsUp ? [["o", "Export list for 192.168.50.5:"], ["o", "/export/prod 192.168.50.0/24"]] : [["e", "clnt_create: RPC: Port mapper failure - Unable to receive: errno 113 (No route to host)"]]; }
+    if (name === "xe" && sub === "pbd-plug") {
+      if (!idMatch(kv.uuid, PBD4)) return [["e", "Error: unknown PBD uuid"]];
+      if (!s.nfsUp) { T.warn("Plugging before fixing the cause just fails again. Prove reachability first."); return [["e", "Error code: SR_BACKEND_FAILURE_73"], ["e", "Error parameters: , NFS mount error: unable to connect (simulated)"]]; }
+      s.plugged = true; T.goal("plug"); return [["g", "(PBD plugged: SR attached)"]];
+    }
+    if (name === "xe" && sub === "pbd-unplug") { T.warn("Never unplug the PBD of an SR with running VMs. Not needed here."); return [["e", "Refused (simulated)."]]; }
+    return undefined;
+  },
+  onLog(file, s, T) { if (file === "/var/log/SMlog") T.goal("smlog"); },
+  xo(s) { return xoView("Storage repositories", ["Name", "Type", "Status"], [["NFS-prod", "NFS", s.plugged ? ["Connected", "ok"] : ["Disconnected", "bad"]], ["Local storage", "EXT", ["Connected", "ok"]]], s.plugged ? ["ok", "NFS-prod attached: VMs can start"] : ["bad", "VMs on NFS-prod cannot start: SR not attached to the host"]); },
+};
+
+/* ---- Case 5 */
+const CASE5 = {
+  id: "c5", title: "Host crash (PSOD twin)", host: "xcpng-h1",
+  ticket: "\"A host rebooted by itself overnight and we do not know why.\"",
+  twin: "A PSOD: you read the purple screen and the core dump, then collect a vm-support bundle.",
+  why: "Separate four causes: a hardware fault, a Xen hypervisor crash, a dom0 kernel panic, or HA fencing where the host restarted itself after losing its heartbeat.",
+  say: "Separate hardware, Xen, dom0 kernel and HA fencing, then collect a status report with xen-bugtool --yestoall.",
+  prompt: () => "[root@xcpng-h1 ~]#",
+  init: () => ({ bundle: false }),
+  goals: [{ id: "when", text: "Find when it crashed and rebooted", hint: "last -x | head -4" }, { id: "xen", text: "Read hypervisor / kernel messages", hint: "xl dmesg | grep -i -E \"mce|error|panic\"" }, { id: "fence", text: "Rule HA fencing in or out", hint: "grep -i -E \"fence|watchdog\" /var/log/xha.log" }, { id: "bundle", text: "Collect the status report (evidence bundle)", hint: "xen-bugtool --yestoall" }],
+  chips: ["last -x | head -4", "xl dmesg | grep -i -E \"mce|error|panic\"", "ls -l /var/crash/", "xe host-crashdump-list", "grep -i -E \"fence|watchdog\" /var/log/xha.log", "xen-bugtool --yestoall", "ls -lh /var/opt/xen/bug-report/"],
+  logs: () => ({ "/var/log/xha.log": [["o", "xhad: [ info] heartbeat ok (simulated)"], ["g", "(no fencing or watchdog lines around 02:47)"]], "/var/log/kern.log": [["e", "Oct  6 02:47:10 xcpng-h1 kernel: mce: [Hardware Error]: Machine check events logged (simulated)"], ["o", "Oct  6 02:47:12 xcpng-h1 kernel: Kernel panic - not syncing: Fatal machine check (simulated)"]] }),
+  handle(c, s, T) {
+    const { name, sub, kv } = c.p;
+    if (name === "last") { T.goal("when"); return [["e", "reboot   system boot  5.10.0+2  Tue Oct  6 02:51   still running"], ["o", "crash    system crash 5.10.0+2  Tue Oct  6 02:47 - 02:51  (00:03)"], ["o", "reboot   system boot  5.10.0+2  Mon Aug 24 08:02 - 02:47 (42+18:45)"]]; }
+    if (name === "xl" && sub === "dmesg") { T.goal("xen"); return [["o", "(XEN) Xen version 4.17.5-xcp (simulated)"], ["e", "(XEN) mce: [Hardware Error]: Machine check events logged (simulated)"], ["o", "(XEN) CPU0: Temperature normal"]]; }
+    if (name === "ls" && c.line.includes("/var/crash")) return [["o", "drwxr-xr-x 2 root root 4096 Oct  6 02:51 127.0.0.1-2026-10-06-02:47:12"], ["n", "# a crash directory exists: kdump caught the dom0 panic"]];
+    if (name === "xe" && sub === "host-crashdump-list") return [["o", "uuid ( RO)                 : 4d1e7a90-6c2b-4f13-9a58-0e3b7c1d2f64"], ["o", "timestamp ( RO)            : 20261006T02:47:12Z"], ["o", "size ( RO)                 : 187654321"], ["n", "# a crash dump exists: delete it after analysis, it lives on the boot disk"]];
+    if (name === "ls" && c.line.includes("bug-report")) return s.bundle ? [["g", "-rw-r--r-- 1 root root 38M Oct  6 09:20 bug-report-20261006092011.tar.bz2"]] : [["o", "total 0"]];
+    if (name === "xen-bugtool") { s.bundle = true; T.goal("bundle"); return [["o", "Collecting logs ... this can take a few minutes (simulated)"], ["g", "Writing bug report to /var/opt/xen/bug-report/bug-report-20261006092011.tar.bz2"], ["n", "# this is the vm-support bundle of XCP-ng: send it to support with the crash time"]]; }
+    if (name === "reboot" || name === "shutdown") { T.warn("Collect the evidence before you reboot again."); return [["e", "Refused (simulated): collect evidence first."]]; }
+    return undefined;
+  },
+  onLog(file, s, T) { if (file === "/var/log/xha.log") T.goal("fence"); if (file === "/var/log/kern.log") T.goal("xen"); },
+  xo(s) { return xoView("Hosts", ["Host", "Uptime", "Status"], [["xcpng-h1", "4 minutes", ["Running", "ok"]], ["xcpng-h2", "41 days", ["Running", "ok"]]], s.bundle ? ["ok", "Evidence collected: bug report ready for support"] : ["warn", "xcpng-h1 rebooted unexpectedly at 02:47 and its VMs restarted"]); },
+};
+
+/* ---- Case 6 */
+const VM6 = "b4c7e81d-2a96-4f3c-9d10-6e5a7c2b8f33";
+const CASE6 = {
+  id: "c6", title: "VM will not start (memory)", host: "xcpng-lab1",
+  ticket: "\"Starting the VM fails with HOST_NOT_ENOUGH_FREE_MEMORY.\"",
+  twin: "\"Insufficient resources\" or a power-on failure from memory admission control.",
+  why: "The host has less free memory than the VM asks for. Running VMs hold their memory, so free memory is lower than total.",
+  say: "Compare needed and free memory, then migrate another VM or reduce this VM. Never force it past the check.",
+  prompt: () => "[root@xcpng-lab1 ~]#",
+  init: () => ({ need: 16 * GIB, free: 4 * GIB, started: false, errSeen: false, web02: "running" }),
+  goals: [{ id: "err", text: "Read the error: needed vs free bytes", hint: "xe vm-start uuid=b4c7e81d-2a96-4f3c-9d10-6e5a7c2b8f33" }, { id: "free", text: "Check free memory on the host", hint: "xe host-list params=name-label,memory-total,memory-free" }, { id: "fix", text: "Free memory safely (shrink this VM, or migrate another)", hint: "xe vm-migrate vm=app-web02 host=xcpng-h2 frees 12 GiB, or shrink this VM to 4 GiB or less with xe vm-memory-limits-set." }, { id: "start", text: "Start the VM", hint: "xe vm-start again" }],
+  chips: ["xe vm-start uuid=b4c7e81d-2a96-4f3c-9d10-6e5a7c2b8f33", "xe host-list params=name-label,memory-total,memory-free", "xl info | grep -E \"total_memory|free_memory\"", "xe vm-list power-state=running params=name-label,memory-static-max", "xe vm-memory-limits-set uuid=b4c7e81d-2a96-4f3c-9d10-6e5a7c2b8f33 static-min=2GiB dynamic-min=2GiB dynamic-max=4GiB static-max=4GiB", "xe vm-migrate vm=app-web02 host=xcpng-h2", "xe vm-start uuid=b4c7e81d-2a96-4f3c-9d10-6e5a7c2b8f33"],
+  logs: () => ({}),
+  handle(c, s, T) {
+    const { name, sub, kv, flags } = c.p;
+    if (name === "xe" && sub === "vm-start") {
+      if (!(idMatch(kv.uuid, VM6) || kv.vm === "app-web03")) return [["e", "Error: unknown VM"]];
+      if (flags.includes("--force")) { T.warn("Never force a start past memory checks."); return [["e", "Refused (simulated)."]]; }
+      if (s.need > s.free) { s.errSeen = true; T.goal("err"); return [["e", "Error code: HOST_NOT_ENOUGH_FREE_MEMORY"], ["e", "Error parameters: " + s.need + ", " + s.free + "   (needed, free in bytes)"]]; }
+      s.started = true; T.goal("start"); return [["g", "(VM app-web03 started)"]];
+    }
+    if (name === "xe" && sub === "host-list") { T.goal("free"); return fmtRecs([{ uuid: "8c3d7f0a-1b52-4e90-b3f7-2a9d51c0e6a4", "name-label": "xcpng-lab1", "memory-total": 32 * GIB, "memory-free": s.free }], kv, flags); }
+    if (name === "xl" && sub === "info") { T.goal("free"); return [["o", "total_memory           : " + 32768], ["h", "free_memory            : " + Math.round(s.free / 2 ** 20)]]; }
+    if (name === "xe" && sub === "vm-list") return fmtRecs([{ uuid: "3e9a41c7-5d20-4b8f-a1e6-9c07d2b45f10", "name-label": "app-db01", "power-state": "running", "memory-static-max": 16 * GIB }, ...(s.web02 === "running" ? [{ uuid: "6a2d9f13-8b47-4c5e-a0d2-14c8e7f3b956", "name-label": "app-web02", "power-state": "running", "memory-static-max": 12 * GIB }] : [])], kv, flags);
+    if (name === "xe" && sub === "vm-memory-limits-set") {
+      if (!idMatch(kv.uuid, VM6)) return [["e", "Error: unknown VM uuid"]];
+      const a = ["static-min", "dynamic-min", "dynamic-max", "static-max"].map(k => sizeToBytes(kv[k]));
+      if (a.some(Number.isNaN)) return [["e", "Error: give static-min, dynamic-min, dynamic-max and static-max, e.g. 2GiB"]];
+      if (!(a[0] <= a[1] && a[1] <= a[2] && a[2] <= a[3])) return [["e", "Error: MEMORY_CONSTRAINT_VIOLATION: static-min <= dynamic-min <= dynamic-max <= static-max"]];
+      s.need = a[3]; T.goal("fix"); return [["g", "(memory limits updated: VM now needs " + (a[3] / GIB) + " GiB)"]];
+    }
+    if (name === "xe" && sub === "vm-migrate") { if (kv.vm === "app-web02" && s.web02 === "running") { s.web02 = "migrated"; s.free += 12 * GIB; T.goal("fix"); return [["g", "(app-web02 live-migrated to xcpng-h2: 12 GiB freed here)"]]; } return [["e", "Error: nothing to migrate"]]; }
+    if (name === "xe" && sub === "vm-shutdown") { T.warn("That VM is in production: get approval before you shut it down."); return [["e", "Refused (simulated): migrate or shrink instead."]]; }
+    return undefined;
+  },
+  onLog() {},
+  xo(s) { return xoView("Recent tasks", ["Task", "Object", "Result"], [["VM.start", "app-web03", s.started ? ["Success", "ok"] : ["Failed", "bad"]], ["VM.start", "app-web03", s.errSeen || s.started ? ["Failed", "bad"] : "-"]], s.started ? ["ok", "app-web03 is running"] : ["bad", "HOST_NOT_ENOUGH_FREE_MEMORY: cannot start app-web03 (needs " + (s.need / GIB) + " GiB, " + (s.free / GIB).toFixed(1) + " GiB free)"]); },
+};
+
+function xoView(title, cols, rows, banner) { return { title, cols, rows, banner }; }
+const SCENARIOS = { free: FREE, c1: CASE1, c2: CASE2, c3: CASE3, c4: CASE4, c5: CASE5, c6: CASE6 };
+
+/* ----------------------------------------------------------------- session */
+function createSession(scn, lab, hooks) {
+  const state = scn.init(lab || {});
+  const done = new Set();
+  const T = {
+    goal(id) { if (!done.has(id) && scn.goals.some(g => g.id === id)) { done.add(id); hooks.onGoal && hooks.onGoal(id, done); } },
+    warn(t) { hooks.onWarn && hooks.onWarn(t); },
+    print(lines) { hooks.onPrint && hooks.onPrint(lines); },
+    syncLab(p) { hooks.onLab && hooks.onLab(p); },
+  };
+  const vars = {};
+  function logFile(path) { const l = scn.logs(state); return l[path]; }
+  function runOne(seg, capture) {
+    let line = seg.trim();
+    if (!line) return [];
+    line = line.replace(/\$([A-Z_][A-Z0-9_]*)/g, (m, v) => (v in vars ? vars[v] : ""));
+    const p = parseCmd(line);
+    const c = { line, p };
+    if (p.name === "clear") return "CLEAR";
+    if (p.name === "help") return [["n", "Click a command chip above, or type. Useful: xe, xl, tail, grep, ping, last, ls."], ["n", "Variables work: PIF=$(xe pif-list management=true --minimal)"], ["n", "Pipes work with grep, head and tail."]];
+    if (p.name === "date") return [["o", "Tue Oct  6 09:14:22 IST 2026"]];
+    if (p.name === "uptime") return [["o", " 09:14:22 up 41 days, 18:45,  1 user,  load average: 0.12, 0.09, 0.05"]];
+    if (p.name === "hostname") return [["o", state.host || scn.host]];
+    if (p.name === "whoami") return [["o", "root"]];
+    if (p.name === "xe" && p.sub === "help") return [["n", "(simulated) real hosts print the full option list: run  xe help <command>  on your own lab."]];
+    if (["tail", "cat", "less", "head", "grep"].includes(p.name)) {
+      const file = [...p.argv].reverse().find(t => t.startsWith("/"));
+      if (file) {
+        const lg = logFile(file);
+        if (!lg) return [["e", p.name + ": " + file + ": No such file or directory (not part of this lab)"]];
+        scn.onLog && scn.onLog(file, state, T);
+        let out = lg.slice();
+        if (p.name === "grep") { const pat = p.words.filter(w => w !== file)[0]; if (pat) { let re; try { re = new RegExp(pat, p.flags.some(f => f.includes("i")) ? "i" : ""); } catch (e) { re = null; } if (re) out = out.filter(l => re.test(l[1])); } }
+        if (p.flags.includes("-f")) out.push(["n", "(simulated: tail -f would keep following; press Ctrl+C on a real host)"]);
+        return out;
+      }
+    }
+    const r = scn.handle ? scn.handle(c, state, T) : undefined;
+    if (r !== undefined) return r;
+    return [["e", p.name.match(/^(xe|xl|xe-toolstack-restart|xen-bugtool)$/) ? "(simulated) that command is not part of this lab. Try a chip above." : "bash: " + p.name + ": command not found (or not part of this lab)"]];
+  }
+  function applyFilter(lines, seg) {
+    const p = parseCmd(seg);
+    if (p.name === "grep") { const pat = p.words[0] || ""; let re; try { re = new RegExp(pat, p.flags.some(f => f.includes("i")) ? "i" : ""); } catch (e) { re = new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")); } return lines.filter(l => re.test(l[1])); }
+    if (p.name === "head") { const n = parseInt((p.flags.find(f => /^-\d+$/.test(f)) || "-10").slice(1), 10) || parseInt(p.words[0], 10) || 10; return lines.slice(0, n); }
+    if (p.name === "tail") { const n = parseInt((p.flags.find(f => /^-\d+$/.test(f)) || "-10").slice(1), 10) || 10; return lines.slice(-n); }
+    return lines;
+  }
+  function exec(raw) {
+    const line = raw.trim();
+    if (!line) return [];
+    const asg = line.match(/^([A-Z_][A-Z0-9_]*)=\$\((.*)\)$/);
+    if (asg) { const r = runOne(asg[2]); vars[asg[1]] = Array.isArray(r) ? r.map(x => x[1]).join(" ").trim() : ""; return []; }
+    const cmds = splitQuoted(line, ";");
+    let all = [];
+    for (const cmdline of cmds) {
+      const sp = splitQuoted(cmdline, "|");
+      let r = runOne(sp[0]);
+      if (r === "CLEAR") return "CLEAR";
+      for (let i = 1; i < sp.length; i++) r = applyFilter(r, sp[i]);
+      all = all.concat(r);
+    }
+    return all;
+  }
+  return { exec, state, done, goals: scn.goals, vars };
+}
+
+if (typeof module !== "undefined") module.exports = { SCENARIOS, createSession, sameNet, validMask, ipToInt, maskToPrefix };
+
+</script>
+<script>
+(function () {
+  "use strict";
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } },
+  };
+
+  const lab = { installed: false, ip: "192.168.50.20", mask: "255.255.255.0", gw: "192.168.50.1", host: "xcpng-lab1", ipMode: "static", dhcpOk: false, winIp: "192.168.50.1", vms: [{ name: "test1", state: "Halted", ram: 512, cpu: 1 }] };
+  let freeTerm = null;
+
+  /* ------------------------------------------------------------ tabs */
+  function showTab(id) {
+    $$(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === id)));
+    $$(".panel").forEach((p) => p.classList.toggle("on", p.id === "tab-" + id));
+    if (id === "console") renderConsole();
+    if (id === "lite") renderLite();
+    if (id === "cases" && !casesMounted) mountCases();
+  }
+  $$(".tab").forEach((t) => t.addEventListener("click", () => showTab(t.dataset.tab)));
+
+  /* ------------------------------------------------------------ text-mode helpers */
+  function tui(bar, inner, hint, foot) {
+    return '<div class="tui"><div class="bar">' + esc(bar) + '</div><div class="area">' + inner + "</div>" + (hint ? '<div class="hint">' + esc(hint) + "</div>" : "") + '<div class="foot">' + esc(foot || "SIMULATED: reconstruction, not a real screenshot") + "</div></div>";
+  }
+  function dlg(title, body, btns) {
+    return '<div class="dlg"><div class="in"><div class="tt">' + esc(title) + "</div>" + body + '<div class="btns">' + (btns || "") + "</div></div></div>";
+  }
+  const opt = (key, val, label, cur) => '<button class="opt" data-opt="' + key + ":" + val + '" aria-pressed="' + (cur === val) + '">' + (cur === val ? "(*) " : "( ) ") + esc(label) + "</button>";
+  const chk = (key, label, on) => '<button class="opt" data-tog="' + key + '" aria-pressed="false">' + (on ? "[*] " : "[ ] ") + esc(label) + "</button>";
+  const tin = (key, val, type, w) => '<input class="tin" id="in-' + key + '" data-in="' + key + '" type="' + (type || "text") + '" value="' + esc(val) + '" autocomplete="off" spellcheck="false"' + (w ? ' style="width:' + w + '"' : "") + ">";
+
+  /* ------------------------------------------------------------ install wizard */
+  const D = { boot: "install", keymap: "uk", thin: true, sysdisk: true, src: "local", pw1: "", pw2: "", net: "static", ip: "192.168.50.20", mask: "255.255.255.0", gw: "192.168.50.1", host: "xcpng-lab1", dns: "1.1.1.1", tz: "Europe/Dublin", ntp: true };
+  let wi = 0; let prog = 0; let progTimer = null;
+  const netCheck = () => {
+    if (D.net === "dhcp") return ["bad", "With a cable straight to another laptop there is no DHCP server, so the host would get no address. Choose Static."];
+    const bits = [];
+    if (Number.isNaN(ipToInt(D.ip))) bits.push("The IP address is not valid.");
+    if (!validMask(D.mask)) bits.push("The mask must be dotted, like 255.255.255.0.");
+    if (!bits.length && !sameNet(D.ip, D.gw, D.mask)) bits.push("The gateway is not in the same network as the IP.");
+    if (!bits.length && !sameNet(D.ip, lab.winIp, D.mask)) bits.push("The Windows laptop (" + lab.winIp + ") would not be in this network.");
+    return bits.length ? ["warn", bits.join(" ")] : ["ok", "Looks right: host " + D.ip + " and the Windows laptop " + lab.winIp + " are in the same /" + maskToPrefix(D.mask) + " network."];
+  };
+  const SCREENS = [
+    { bar: "XCP-ng 8.3 installer: boot menu", hint: "On a Dell laptop press F12 at power-on and pick the USB stick first.",
+      body: () => dlg("Boot menu", ["install", "safe", "multipath", "shell"].map((o) => opt("boot", o, o, D.boot)).join("") + "<p>&nbsp;</p><p>Auto boot in 8 seconds</p>", '<button class="tbtn pri" data-w="next">Boot</button>'),
+      can: () => D.boot === "install", next: "Boot",
+      coach: { do: ["Plug in the USB stick and the Ethernet cable first", "Press F12 at power-on and pick the USB device", "Choose install and press Enter"], why: "The installer needs the cable connected so it can see the network card.", check: () => (D.boot === "install" ? ["ok", "install is the normal choice."] : ["warn", "safe, multipath and shell are for special cases. Choose install."]) } },
+    { bar: "XCP-ng 8.3 installer: keyboard", hint: "Pick the layout printed on your keys.",
+      body: () => dlg("Select Keymap", ["uk", "us", "fr", "de"].map((o) => opt("keymap", o, "[" + (o === "fr" ? "azerty" : o === "de" ? "qwertz" : "qwerty") + "] " + o, D.keymap)).join(""), '<button class="tbtn pri" data-w="next">Ok</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => true, next: "Ok",
+      coach: { do: ["Use the arrow keys to pick your layout", "Press Enter on Ok"], why: "A wrong layout makes the password you type here different from the one you type later.", check: () => ["ok", "Layout set to " + D.keymap + "."] } },
+    { bar: "XCP-ng 8.3 installer: licence", hint: "Tab moves between buttons, Enter presses one.",
+      body: () => dlg("End User Licence", "<p>Welcome to XCP-ng setup.</p><p>XCP-ng is free and open source software (GPLv2 and other licences).</p><p>You must accept to continue.</p>", '<button class="tbtn pri" data-w="next">Accept EULA</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => true, next: "Accept EULA",
+      coach: { do: ["Read the welcome text", "Select Accept EULA"], why: "Nothing to buy: XCP-ng is free and open source.", check: () => ["ok", "Nothing to configure here."] } },
+    { bar: "XCP-ng 8.3 installer: disks", hint: "WARNING: the chosen disk is erased. Space ticks a box.",
+      body: () => dlg("Virtual Machine Storage", "<p>System disk (XCP-ng itself):</p>" + chk("sysdisk", "sda  238 GiB  (the laptop SSD)", D.sysdisk) + "<p>Disk for VM storage:</p>" + chk("vmdisk", "sda  238 GiB", true) + "<p>&nbsp;</p>" + chk("thin", "Enable thin provisioning (Optimized storage)", D.thin), '<button class="tbtn pri" data-w="next">Ok</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => D.sysdisk, next: "Ok",
+      coach: { do: ["Tick the laptop SSD as the system disk", "Keep thin provisioning ticked", "Understand that the whole disk is erased"], why: "Thin provisioning creates a local EXT storage repository. You need it for the snapshot test in Case 3.", check: () => (!D.sysdisk ? ["bad", "Tick a system disk to continue."] : D.thin ? ["ok", "Thin provisioning on: a local EXT storage repository will exist."] : ["warn", "Without thin provisioning the local storage type changes and the snapshot test (Case 3) is limited."]) } },
+    { bar: "XCP-ng 8.3 installer: source", hint: "Then skip: Verify and Supplemental packs.",
+      body: () => dlg("Select Installation Source", "<p>Please select the type of source:</p>" + ["local", "http", "nfs"].map((o) => opt("src", o, { local: "Local media", http: "HTTP or FTP", nfs: "NFS" }[o], D.src)).join(""), '<button class="tbtn pri" data-w="next">Ok</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => true, next: "Ok",
+      coach: { do: ["Choose Local media (the USB stick)", "Skip verification", "Skip supplemental packs"], why: "Local media is the stick you booted from. Verification only checks the stick, so skipping saves time.", check: () => (D.src === "local" ? ["ok", "Local media is right for a USB stick."] : ["warn", "HTTP and NFS need a network source. For a USB stick use Local media."]) } },
+    { bar: "XCP-ng 8.3 installer: password", hint: "This is the password for SSH and XO Lite.",
+      body: () => dlg("Set Password", '<div class="frow"><label>Password:</label>' + tin("pw1", D.pw1, "password") + '</div><div class="frow"><label>Confirm password:</label>' + tin("pw2", D.pw2, "password") + "</div><p>&nbsp;</p><p>Lab only: choose something simple.</p>", '<button class="tbtn pri" data-w="next">Ok</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => !!D.pw1 && D.pw1 === D.pw2, next: "Ok",
+      coach: { do: ["Type a simple lab password twice", "Write it down", "Never reuse a real password"], why: "root is the only account. You use it for SSH, XO Lite and Xen Orchestra.", check: () => (!D.pw1 ? ["warn", "Type a password."] : D.pw1 !== D.pw2 ? ["warn", "The two passwords differ."] : ["ok", "Passwords match."]) } },
+    { bar: "XCP-ng 8.3 installer: management network", hint: "Read the field labels on YOUR screen: IP, mask, gateway.",
+      body: () => dlg("Networking", "<p>Management interface: eth0 (cable plugged in)</p>" + opt("net", "dhcp", "Automatic configuration (DHCP)", D.net) + opt("net", "static", "Static configuration:", D.net) + (D.net === "static" ? '<div class="frow"><label>IP Address:</label>' + tin("ip", D.ip) + '</div><div class="frow"><label>Subnet mask:</label>' + tin("mask", D.mask) + '</div><div class="frow"><label>Gateway:</label>' + tin("gw", D.gw) + "</div>" : ""), '<button class="tbtn pri" data-w="next">Ok</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => true, next: "Ok",
+      coach: { do: ["Choose Static configuration", "IP 192.168.50.20, mask 255.255.255.0, gateway 192.168.50.1", "Windows laptop will use 192.168.50.1"], why: "A cable between two laptops has no DHCP server. Both machines need a fixed address in the same network. The real installer may word the fields differently, so read them.", check: netCheck } },
+    { bar: "XCP-ng 8.3 installer: hostname", hint: "Hostname is only a label for your lab.",
+      body: () => dlg("Hostname and DNS", '<div class="frow"><label>Hostname:</label>' + tin("host", D.host) + '</div><div class="frow"><label>DNS:</label>' + tin("dns", D.dns) + "</div><p>Time zone:  " + esc(D.tz) + "</p>" + chk("ntp", "Use NTP", D.ntp), '<button class="tbtn pri" data-w="next">Ok</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => /^[a-z0-9-]+$/i.test(D.host), next: "Ok",
+      coach: { do: ["Hostname: xcpng-lab1", "DNS: 1.1.1.1 (only needed with internet)", "Time zone Europe / Dublin, use NTP"], why: "Correct time matters because log timestamps are your evidence in every ticket.", check: () => (/^[a-z0-9-]+$/i.test(D.host) ? ["ok", "Hostname accepted."] : ["warn", "Use letters, numbers and dashes only."]) } },
+    { bar: "XCP-ng 8.3 installer: confirm", hint: "Install takes about 5 to 10 minutes on real hardware.",
+      body: () => dlg("Confirm Installation", "<p>Setup is ready to install XCP-ng.</p><p>WARNING: all data on sda will be deleted.</p><p>Install XCP-ng 8.3 now?</p>", '<button class="tbtn pri" data-w="install">Install XCP-ng</button><button class="tbtn" data-w="back">Back</button>'),
+      can: () => true, next: "Install XCP-ng", nobtn: true,
+      coach: { do: ["Read the warning once more", "Select Install XCP-ng"], why: "This is the point of no return for the disk.", check: () => ["warn", "In this lab nothing is erased. On a real laptop it is."] } },
+    { bar: "XCP-ng 8.3 installer: installing", hint: "",
+      body: () => dlg(prog >= 100 ? "Installation Complete" : "Installing", prog >= 100 ? "<p>XCP-ng has been installed.</p><p>Remove the USB stick, then press Enter to reboot.</p>" : '<p>Installing XCP-ng 8.3 ...</p><div class="prog"><i style="width:' + prog + '%"></i></div><p>' + Math.round(prog) + "%</p>", prog >= 100 ? '<button class="tbtn pri" data-w="reboot">Reboot</button>' : ""),
+      can: () => prog >= 100, next: "Reboot", nobtn: true,
+      coach: { do: ["Wait for 100 percent", "Remove the USB stick", "Press Enter to reboot"], why: "If it boots the USB stick again, remove the stick or change the boot order.", check: () => (prog >= 100 ? ["ok", "Done. Reboot to continue to the host console."] : ["warn", "Installing..."]) } },
+  ];
+
+  function renderInstall() {
+    const root = $("#tab-install");
+    const s = SCREENS[wi];
+    root.innerHTML =
+      '<div class="grid2"><div class="stack"><div class="card" style="padding:12px"><div class="row" style="justify-content:space-between"><span class="step">Screen ' + (wi + 1) + " of " + SCREENS.length + '</span><button class="btn" data-w="skip">Skip the install with defaults</button></div><div class="dots">' +
+      SCREENS.map((_, i) => "<i class=\"" + (i < wi ? "on" : i === wi ? "cur" : "") + '"></i>').join("") + "</div>" +
+      '<div id="wiz-screen">' + tui(s.bar, s.body(), s.hint) + '</div><div class="row" style="margin-top:12px;justify-content:space-between"><button class="btn" data-w="back"' + (wi === 0 ? " disabled" : "") + '>Back</button><button class="btn pri" id="wiz-next" data-w="next">' + esc(s.next) + ' &rarr;</button></div></div></div>' +
+      '<div class="stack"><div class="card coach"><h3>What you press</h3><ul>' + s.coach.do.map((d) => "<li>" + esc(d) + "</li>").join("") + '</ul><h3>Why</h3><p>' + esc(s.coach.why) + '</p><div id="wiz-check" class="callout"></div></div><div class="card flat small muted">On the real installer there is no mouse. Use Tab and the arrow keys to move, Space to tick a box, Enter on Ok. In this lab you can click.</div></div></div>';
+    refreshMeta();
+  }
+  function refreshMeta() {
+    const s = SCREENS[wi];
+    const [kind, msg] = s.coach.check();
+    const c = $("#wiz-check"); if (c) { c.className = "callout " + kind; c.textContent = msg; }
+    const n = $("#wiz-next"); if (n) { n.disabled = !s.can(); n.textContent = s.next + " →"; n.style.display = ""; }
+    // text-mode Ok buttons mirror can()
+    $$("#wiz-screen [data-w=next]").forEach((b) => (b.disabled = !s.can()));
+  }
+  function wizGo(d) {
+    wi = Math.max(0, Math.min(SCREENS.length - 1, wi + d));
+    if (wi === SCREENS.length - 1) startProgress();
+    renderInstall();
+  }
+  function startProgress() {
+    clearInterval(progTimer); prog = 0;
+    progTimer = setInterval(() => {
+      prog = Math.min(100, prog + 4 + Math.random() * 6);
+      if (wi !== SCREENS.length - 1) { clearInterval(progTimer); return; }
+      const sc = $("#wiz-screen"); if (sc) sc.innerHTML = tui(SCREENS[wi].bar, SCREENS[wi].body(), SCREENS[wi].hint);
+      refreshMeta();
+      if (prog >= 100) clearInterval(progTimer);
+    }, 220);
+  }
+  function commitInstall(useDefaults) {
+    if (useDefaults) { Object.assign(D, { net: "static", ip: "192.168.50.20", mask: "255.255.255.0", gw: "192.168.50.1", host: "xcpng-lab1" }); }
+    lab.installed = true; lab.ip = D.ip; lab.mask = D.mask; lab.gw = D.gw; lab.host = D.host || "xcpng-lab1"; lab.ipMode = D.net; lab.dhcpOk = false;
+    C.booted = false; freeTerm = null; casesMounted = false;
+    showTab("console");
+  }
+  $("#tab-install").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.opt) { const [k, v] = b.dataset.opt.split(":"); D[k] = v; renderInstall(); return; }
+    if (b.dataset.tog) { D[b.dataset.tog] = !D[b.dataset.tog]; renderInstall(); return; }
+    const w = b.dataset.w; if (!w) return;
+    if (w === "back") wizGo(-1);
+    else if (w === "next") { if (SCREENS[wi].can()) wizGo(1); }
+    else if (w === "install") wizGo(1);
+    else if (w === "reboot") { if (prog >= 100) commitInstall(false); }
+    else if (w === "skip") commitInstall(true);
+  });
+  $("#tab-install").addEventListener("input", (e) => {
+    const k = e.target.dataset.in; if (!k) return; D[k] = e.target.value; refreshMeta();
+  });
+  $("#tab-install").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.dataset.in && SCREENS[wi].can() && wi < SCREENS.length - 2) { e.preventDefault(); wizGo(1); } });
+
+  /* ------------------------------------------------------------ terminal widget */
+  function makeTerminal(root, opts) {
+    const scn = opts.scn;
+    root.innerHTML = '<div class="chips" data-chips></div><div class="term"><div class="tb"><span>' + esc(opts.title) + '</span><span>simulated shell</span></div><div class="out" tabindex="0" aria-live="polite"></div><div class="inrow"><span data-prompt></span><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command line" placeholder="type a command, or click a shortcut above"></div></div>';
+    const out = $(".out", root); const inp = $("input", root); const pr = $("[data-prompt]", root); const chips = $("[data-chips]", root);
+    const hist = []; let hi = 0;
+    const T = {
+      ses: null,
+      prompt() { return scn.prompt(T.ses.state); },
+      print(lines) {
+        lines.forEach((l) => { const d = document.createElement("div"); d.className = l[0]; d.textContent = l[1]; out.appendChild(d); });
+        out.scrollTop = out.scrollHeight;
+      },
+      run(cmd) {
+        if (!cmd.trim()) return;
+        hist.push(cmd); hi = hist.length;
+        const d = document.createElement("div");
+        d.innerHTML = '<span class="p">' + esc(T.prompt()) + '</span> <span class="c">' + esc(cmd) + "</span>";
+        out.appendChild(d);
+        const r = T.ses.exec(cmd);
+        if (r === "CLEAR") out.innerHTML = ""; else T.print(r);
+        pr.textContent = T.prompt();
+        opts.after && opts.after();
+        out.scrollTop = out.scrollHeight;
+      },
+      setSession(ses) { T.ses = ses; pr.textContent = T.prompt(); out.innerHTML = ""; T.print([["n", "Simulated host shell. Click a shortcut or type. Try: help"]]); },
+      focus() { inp.focus(); },
+    };
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { const v = inp.value; inp.value = ""; T.run(v); }
+      else if (e.key === "ArrowUp") { if (hi > 0) { hi--; inp.value = hist[hi]; } e.preventDefault(); }
+      else if (e.key === "ArrowDown") { if (hi < hist.length - 1) { hi++; inp.value = hist[hi]; } else { hi = hist.length; inp.value = ""; } e.preventDefault(); }
+    });
+    chips.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.act !== undefined) { const a = scn.actions[+b.dataset.act]; a.run(T.ses.state, T); opts.after && opts.after(); return; }
+      T.run(b.dataset.cmd);
+    });
+    T.renderChips = () => {
+      chips.innerHTML = (scn.chips || []).map((c) => '<button class="chip" data-cmd="' + esc(c) + '" title="' + esc(c) + '">' + esc(c) + "</button>").join("") + (scn.actions || []).map((a, i) => '<button class="chip act" data-act="' + i + '">' + esc(a.label) + "</button>").join("");
+    };
+    T.renderChips();
+    return T;
+  }
+
+  /* ------------------------------------------------------------ host console */
+  const C = { view: "menu", booted: false, msg: "" };
+  function reachable() { return lab.installed && (lab.ipMode === "static" || lab.dhcpOk) && !!lab.ip && sameNet(lab.winIp, lab.ip, lab.mask); }
+  function xsc() {
+    const v = C.view; let body = "";
+    if (v === "menu") body = dlg("XCP-ng 8.3", [["status", "Status Display"], ["net", "Network and Management Interface"], ["hw", "Hardware and BIOS Information"], ["vms", "Virtual Machines"], ["shell", "Local Command Shell"]].map((x) => '<button class="opt" data-x="' + x[0] + '" aria-pressed="false">  ' + x[1] + "</button>").join(""), "");
+    if (v === "status") body = dlg("Status Display", "<p>Hostname:  " + esc(lab.host) + "</p><p>Management IP:  " + esc(lab.ipMode === "dhcp" && !lab.dhcpOk ? "(none)" : lab.ip) + "</p><p>Netmask:  " + esc(lab.mask) + "</p><p>Gateway:  " + esc(lab.gw) + "</p><p>Link:  eth0  UP  1000 Mb/s</p><p>XCP-ng 8.3.0   Xen 4.17</p>", '<button class="tbtn pri" data-x="menu">Back</button>');
+    if (v === "net") body = dlg("Network and Management Interface", '<button class="opt" data-x="netcfg" aria-pressed="false">  Configure Management Interface</button><button class="opt" data-x="nettest" aria-pressed="false">  Test Network</button>' + (C.msg ? "<p>&nbsp;</p><p>" + esc(C.msg) + "</p>" : ""), '<button class="tbtn pri" data-x="menu">Back</button>');
+    if (v === "netcfg") body = dlg("Configure Management Interface", opt("cmode", "dhcp", "DHCP", C.cmode || lab.ipMode) + opt("cmode", "static", "Static IP address", C.cmode || lab.ipMode) + '<div class="frow"><label>IP Address:</label>' + tin("cip", C.cip || lab.ip) + '</div><div class="frow"><label>Netmask:</label>' + tin("cmask", C.cmask || lab.mask) + '</div><div class="frow"><label>Gateway:</label>' + tin("cgw", C.cgw || lab.gw) + "</div>" + (C.msg ? "<p>" + esc(C.msg) + "</p>" : ""), '<button class="tbtn pri" data-x="apply">Apply</button><button class="tbtn" data-x="net">Back</button>');
+    if (v === "hw") body = dlg("Hardware and BIOS Information", "<p>CPU:  2 x Intel(R) Core(TM) (virtual)</p><p>Memory:  4096 MiB</p><p>NIC:  eth0  Intel I219-LM</p><p>Storage:  238 GiB SSD</p>", '<button class="tbtn pri" data-x="menu">Back</button>');
+    if (v === "vms") body = dlg("Virtual Machines", lab.vms.map((m) => "<p>" + esc(m.name) + "  [" + esc(m.state) + "]</p>").join("") || "<p>(none)</p>", '<button class="tbtn pri" data-x="menu">Back</button>');
+    if (v === "shell") body = dlg("Local Command Shell", "<p>This opens a root shell on the host.</p><p>In this lab it is the terminal on the right (or below on a phone).</p>", '<button class="tbtn pri" data-x="menu">Back</button>');
+    return tui("XCP-ng: xsconsole (host console)", body, "Click an item (on a real host: arrow keys and Enter).");
+  }
+  function winBox() {
+    return '<div class="card"><h3>Windows laptop (the other end of the cable)</h3><div class="form"><label>Windows Ethernet IP<input id="win-ip" value="' + esc(lab.winIp) + '" autocomplete="off" spellcheck="false"></label><label>Mask<input value="' + esc(lab.mask) + '" disabled></label></div><div class="row" style="margin-top:10px"><button class="btn" data-win="ping">ping host</button><button class="btn" data-win="ssh">ssh root@host</button><button class="btn" data-win="lite">Open XO Lite</button></div><div class="term" style="margin-top:10px"><div class="tb"><span>Windows PowerShell (simulated)</span></div><div class="out" id="win-out" style="height:120px"><div class="n">Set the Windows IP the way you would in Settings, then test.</div></div></div></div>';
+  }
+  function winSay(lines) { const o = $("#win-out"); if (!o) return; lines.forEach((l) => { const d = document.createElement("div"); d.className = l[0]; d.textContent = l[1]; o.appendChild(d); }); o.scrollTop = o.scrollHeight; }
+  function diagnose() {
+    if (lab.ipMode === "dhcp" && !lab.dhcpOk) return "The host got no address: DHCP on a direct cable. Set a static IP (xsconsole, or xe pif-reconfigure-ip).";
+    if (Number.isNaN(ipToInt(lab.winIp))) return "The Windows IP is not valid.";
+    if (!sameNet(lab.winIp, lab.ip, lab.mask)) return "Windows " + lab.winIp + " and host " + lab.ip + " are not in the same network (mask " + lab.mask + ").";
+    return "";
+  }
+  function bootAnim(el, done) {
+    const lines = ["Booting from local disk ...", "Xen 4.17.5-xcp starting ...", "Starting dom0 kernel ...", "Starting xapi ...        [  OK  ]", "Starting xenopsd ...     [  OK  ]", "XCP-ng 8.3 ready."];
+    let i = 0; el.innerHTML = tui("XCP-ng: first boot", '<div class="bootlog" id="bl"></div>', "", "SIMULATED: reconstruction, not a real screenshot");
+    const t = setInterval(() => { const b = $("#bl"); if (!b) { clearInterval(t); return; } b.textContent += lines[i++] + "\n"; if (i >= lines.length) { clearInterval(t); setTimeout(done, 500); } }, 380);
+  }
+  function renderConsole() {
+    const root = $("#tab-console");
+    if (!lab.installed) { root.innerHTML = '<div class="card overlay"><h2>The host is not installed yet</h2><p class="muted">Finish the install wizard, or skip it with the default settings.</p><div class="row" style="justify-content:center"><button class="btn pri" data-go="install">Go to the install</button><button class="btn" data-go="skip">Skip with defaults</button></div></div>'; return; }
+    if (!C.booted) {
+      root.innerHTML = '<div id="boot"></div>';
+      bootAnim($("#boot"), () => { C.booted = true; C.view = "menu"; renderConsole(); });
+      return;
+    }
+    root.innerHTML = '<div class="grid2 even"><div class="stack"><div id="xsc">' + xsc() + "</div>" + winBox() + '</div><div class="stack"><div class="card"><h2>Local Command Shell / SSH</h2><p class="muted small">This is the shell you reach with <code>ssh root@' + esc(lab.ip) + "</code>. Run the first checks, and practise the static IP fix.</p><div id=\"free-term\"></div></div></div></div>";
+    freeTerm = makeTerminal($("#free-term"), { scn: SCENARIOS.free, title: "root@" + lab.host + ": ssh session" });
+    freeTerm.setSession(createSession(SCENARIOS.free, lab, { onLab: (p) => { Object.assign(lab, p); refreshX(); }, onWarn: (t) => freeTerm.print([["w", "WARNING: " + t]]), onGoal() {} }));
+  }
+  function refreshX() { const x = $("#xsc"); if (x) x.innerHTML = xsc(); }
+  function syncFree() { if (freeTerm && freeTerm.ses) Object.assign(freeTerm.ses.state, { ip: lab.ip, mask: lab.mask, gw: lab.gw, mode: lab.ipMode, dhcpOk: lab.dhcpOk }); }
+  $("#tab-console").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.go === "install") return showTab("install");
+    if (b.dataset.go === "skip") return commitInstall(true);
+    if (b.dataset.opt) { const [k, v] = b.dataset.opt.split(":"); if (k === "cmode") { C.cmode = v; C.cip = $("#in-cip") ? $("#in-cip").value : C.cip; refreshX(); } return; }
+    if (b.dataset.x) {
+      const x = b.dataset.x;
+      if (x === "nettest") { C.msg = sameNet(lab.gw, lab.ip, lab.mask) && lab.ipMode === "static" ? "Ping to gateway " + lab.gw + ": OK (simulated)" : "Ping to gateway failed: no usable address."; C.view = "net"; }
+      else if (x === "apply") {
+        const mode = C.cmode || lab.ipMode; const ip = ($("#in-cip") || {}).value || lab.ip; const mask = ($("#in-cmask") || {}).value || lab.mask; const gw = ($("#in-cgw") || {}).value || lab.gw;
+        if (mode === "static" && (Number.isNaN(ipToInt(ip)) || !validMask(mask))) { C.cip = ip; C.cmask = mask; C.cgw = gw; C.msg = "Invalid IP or netmask. The netmask is dotted, like 255.255.255.0."; }
+        else { lab.ipMode = mode; lab.dhcpOk = false; if (mode === "static") { lab.ip = ip; lab.mask = mask; lab.gw = gw; } C.msg = "Saved: " + (mode === "static" ? ip + " / " + mask : "DHCP (no server on a direct cable: no address)"); C.cip = C.cmask = C.cgw = null; C.cmode = null; syncFree(); }
+        C.view = "netcfg";
+      } else { C.view = x; C.msg = ""; if (x === "netcfg") { C.cmode = lab.ipMode; } }
+      if (x === "shell" && freeTerm) freeTerm.focus();
+      refreshX(); return;
+    }
+    if (b.dataset.win) {
+      lab.winIp = ($("#win-ip") || {}).value.trim() || lab.winIp; const d = diagnose();
+      if (b.dataset.win === "ping") { if (!d) winSay([["c", "PS> ping " + lab.ip], ["g", "Reply from " + lab.ip + ": bytes=32 time<1ms TTL=64"]]); else winSay([["c", "PS> ping " + lab.ip], ["e", "Reply from " + lab.winIp + ": Destination host unreachable."], ["h", "Why: " + d]]); }
+      if (b.dataset.win === "ssh") { if (!d) { winSay([["c", "PS> ssh root@" + lab.ip], ["g", "root@" + lab.ip + "'s password: ******** (accepted)"], ["n", "Connected: the shell on the right is this session."]]); if (freeTerm) freeTerm.focus(); } else winSay([["c", "PS> ssh root@" + lab.ip], ["e", "ssh: connect to host " + lab.ip + " port 22: Connection timed out"], ["h", "Why: " + d]]); }
+      if (b.dataset.win === "lite") { if (!d) showTab("lite"); else winSay([["c", "Browser: https://" + lab.ip], ["e", "This site can't be reached"], ["h", "Why: " + d]]); }
+    }
+  });
+  $("#tab-console").addEventListener("input", (e) => { if (e.target.id === "win-ip") { lab.winIp = e.target.value.trim(); } });
+
+  /* ------------------------------------------------------------ XO Lite */
+  function renderLite() {
+    const root = $("#tab-lite");
+    if (!lab.installed) { root.innerHTML = '<div class="card overlay"><h2>No host to connect to yet</h2><p class="muted">XO Lite lives on the host. Install it first.</p><div class="row" style="justify-content:center"><button class="btn pri" data-go="install">Go to the install</button><button class="btn" data-go="skip">Skip with defaults</button></div></div>'; return; }
+    const d = diagnose();
+    if (d) { root.innerHTML = '<div class="card overlay"><h2>This site can\'t be reached</h2><p>https://' + esc(lab.ip) + ' did not answer.</p><div class="callout bad">' + esc(d) + '</div><p class="muted small">Fix the address in Host console, or let the lab use the defaults.</p><div class="row" style="justify-content:center"><button class="btn" data-go="console">Open Host console</button><button class="btn pri" data-go="skip">Reset to defaults</button></div></div>'; return; }
+    const running = lab.vms.filter((v) => v.state === "Running");
+    const ram = running.reduce((a, v) => a + v.ram, 0);
+    root.innerHTML = '<div class="lite"><div class="url"><span>Not secure</span><b>https://' + esc(lab.ip) + '/</b></div><div class="shell"><div class="side"><div class="on">Home</div><div>Hosts</div><div>VMs</div><div>Storage</div><div>Network</div></div><div class="main"><div><h2>' + esc(lab.host) + '</h2><p class="muted small">XCP-ng 8.3.0 &middot; connected as root &middot; self-signed certificate accepted</p></div>' +
+      '<div class="kv"><div class="tile"><span class="muted small">CPU (2 vCPU)</span><b>' + (3 + running.length * 4) + '%</b><div class="meter"><i style="width:' + (3 + running.length * 4) + '%"></i></div></div><div class="tile"><span class="muted small">Memory (4096 MiB)</span><b>' + (420 + ram) + ' MiB</b><div class="meter"><i style="width:' + Math.min(100, Math.round(((420 + ram) / 4096) * 100)) + '%"></i></div></div><div class="tile"><span class="muted small">Storage: Local storage</span><b>72 GiB free</b><div class="meter"><i style="width:12%"></i></div></div></div>' +
+      '<div><h3>Virtual machines</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>State</th><th>vCPU</th><th>RAM</th><th></th></tr></thead><tbody>' + lab.vms.map((v, i) => "<tr><td>" + esc(v.name) + '</td><td><span class="pill ' + (v.state === "Running" ? "ok" : "off") + '">' + v.state + "</span></td><td>" + v.cpu + "</td><td>" + v.ram + ' MiB</td><td><button class="btn" data-vm="' + i + '">' + (v.state === "Running" ? "Stop" : "Start") + "</button></td></tr>").join("") + '</tbody></table></div></div>' +
+      '<div><h3>New VM</h3><div class="form"><label>Template<select id="nv-t"><option>Other install media</option><option>Debian 12</option></select></label><label>Name<input id="nv-n" value="test2"></label><label>vCPU<input id="nv-c" type="number" min="1" max="2" value="1"></label><label>Memory (MiB)<input id="nv-r" type="number" min="256" step="256" value="512"></label><label>Install ISO<select id="nv-i"><option>alpine-virt (Local ISO)</option></select></label></div><div class="row" style="margin-top:10px"><button class="btn pri" data-vm="new">Create VM</button></div><p class="muted small">Needs the Local ISO storage from the shell: <code>xe sr-create type=iso ...</code> then <code>xe sr-scan</code>.</p></div></div></div></div>';
+  }
+  $("#tab-lite").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.go === "install") return showTab("install");
+    if (b.dataset.go === "console") return showTab("console");
+    if (b.dataset.go === "skip") return commitInstall(true);
+    if (b.dataset.vm === "new") { const n = ($("#nv-n").value || "vm").trim(); lab.vms.push({ name: n, state: "Halted", ram: parseInt($("#nv-r").value, 10) || 512, cpu: parseInt($("#nv-c").value, 10) || 1 }); renderLite(); return; }
+    if (b.dataset.vm !== undefined) { const v = lab.vms[+b.dataset.vm]; v.state = v.state === "Running" ? "Halted" : "Running"; renderLite(); }
+  });
+
+  /* ------------------------------------------------------------ six cases */
+  let casesMounted = false; let cur = null; let curTerm = null; let showChips = true;
+  const doneSet = new Set(store.get("xcpng-lab-done") || []);
+  const ORDER = ["c1", "c2", "c3", "c4", "c5", "c6"];
+  function mountCases() { casesMounted = true; selectCase(cur ? cur.id : "c1"); }
+  function pickerHtml() {
+    return '<div class="scn" role="group" aria-label="Choose a ticket">' + ORDER.map((id, i) => { const s = SCENARIOS[id]; return '<button data-case="' + id + '" aria-pressed="' + (cur && cur.id === id) + '"><span class="k"><span>Case ' + (i + 1) + "</span><span>" + (doneSet.has(id) ? "solved" : "") + "</span></span>" + esc(s.title) + "</button>"; }).join("") + "</div>";
+  }
+  function selectCase(id) {
+    const scn = SCENARIOS[id];
+    const ses = createSession(scn, lab, {
+      onGoal() { renderGoals(); renderXo(); },
+      onWarn(t) { if (curTerm) curTerm.print([["w", "WARNING: " + t]]); },
+      onPrint(l) { if (curTerm) curTerm.print(l); },
+      onLab(p) { Object.assign(lab, p); },
+    });
+    cur = { id, scn, ses };
+    const root = $("#tab-cases");
+    root.innerHTML = '<div class="stack">' + pickerHtml() + '<div class="grid2 even"><div class="stack">' +
+      '<div class="card"><h3>The ticket</h3><p><i>' + scn.ticket + '</i></p><h3 style="margin-top:12px">VMware twin</h3><p>' + esc(scn.twin) + '</p><h3 style="margin-top:12px">Why it happens</h3><p>' + esc(scn.why) + "</p></div>" +
+      '<div class="card"><h3>What the customer sees (simulated Xen Orchestra)</h3><div id="xo"></div></div>' +
+      '<div class="card"><h3>Your goals</h3><ul class="goals" id="goals"></ul><div id="hint"></div><div class="row" style="margin-top:10px"><button class="btn" data-c="hint">Give me a hint</button><button class="btn" data-c="chips">' + (showChips ? "Hide" : "Show") + ' command shortcuts</button><button class="btn" data-c="reset">Reset this ticket</button></div><div id="win"></div></div>' +
+      '</div><div class="stack"><div class="card"><h2>Shell on ' + esc(scn.host) + '</h2><div id="case-term"></div></div></div></div></div>';
+    curTerm = makeTerminal($("#case-term"), { scn, title: "root@" + scn.host + ": ssh session", after: () => { renderXo(); } });
+    curTerm.setSession(ses);
+    if (!showChips) $("[data-chips]", root).style.display = "none";
+    renderGoals(); renderXo();
+  }
+  function renderGoals() {
+    const g = $("#goals"); if (!g || !cur) return;
+    g.innerHTML = cur.scn.goals.map((x) => '<li class="' + (cur.ses.done.has(x.id) ? "done" : "") + '"><span class="box">' + (cur.ses.done.has(x.id) ? "&#10003;" : "") + "</span><span>" + esc(x.text) + "</span></li>").join("");
+    const all = cur.scn.goals.every((x) => cur.ses.done.has(x.id));
+    const w = $("#win");
+    if (all) { if (!doneSet.has(cur.id)) { doneSet.add(cur.id); store.set("xcpng-lab-done", Array.from(doneSet)); const pk = $(".scn", $("#tab-cases")); if (pk) pk.outerHTML = pickerHtml(); } w.innerHTML = '<div class="callout ok" style="margin-top:12px"><b>Resolved.</b> The resolution in one line:<div class="say" style="margin-top:6px">' + esc(cur.scn.say) + "</div></div>"; }
+    else w.innerHTML = "";
+  }
+  function renderXo() {
+    const x = $("#xo"); if (!x || !cur) return; const v = cur.scn.xo(cur.ses.state);
+    const cell = (c) => (Array.isArray(c) ? '<span class="pill ' + c[1] + '">' + esc(c[0]) + "</span>" : esc(c));
+    x.innerHTML = '<div class="xo"><div class="hd"><span>Xen Orchestra</span><span>simulated</span></div><div class="bn ' + v.banner[0] + '">' + esc(v.banner[1]) + '</div><div class="tablewrap"><table><thead><tr>' + v.cols.map((c) => "<th>" + esc(c) + "</th>").join("") + "</tr></thead><tbody>" + v.rows.map((r) => "<tr>" + r.map((c) => "<td>" + cell(c) + "</td>").join("") + "</tr>").join("") + "</tbody></table></div></div>";
+  }
+  $("#tab-cases").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.case) return selectCase(b.dataset.case);
+    if (b.dataset.c === "reset") return selectCase(cur.id);
+    if (b.dataset.c === "chips") { showChips = !showChips; const ch = $("[data-chips]", $("#tab-cases")); if (ch) ch.style.display = showChips ? "" : "none"; b.textContent = (showChips ? "Hide" : "Show") + " command shortcuts"; return; }
+    if (b.dataset.c === "hint") { const g = cur.scn.goals.find((x) => !cur.ses.done.has(x.id)); $("#hint").innerHTML = g ? '<div class="callout warn" style="margin-top:10px"><b>Next goal:</b> ' + esc(g.text) + "<br><code>" + esc(g.hint) + "</code></div>" : '<div class="callout ok" style="margin-top:10px">All goals done.</div>'; }
+  });
+
+  /* ------------------------------------------------------------ resolutions & official docs */
+  const DOC = {
+    commonPower: ["XCP-ng docs: VM not in expected power state", "https://docs.xcp-ng.org/troubleshooting/common-problems/#vm-not-in-expected-power-state"],
+    logs: ["XCP-ng docs: Log files", "https://docs.xcp-ng.org/troubleshooting/log-files/"],
+    xsFail: ["XenServer 8 docs: Cope with machine failures (pool coordinator failure, vm-reset-powerstate warning)", "https://docs.xenserver.com/en-us/xenserver/8/dr/machine-failures"],
+    haCoord: ["XCP-ng docs: HA troubleshooting, changing pool coordinators", "https://docs.xcp-ng.org/troubleshooting/troubleshooting-ha/#changing-pool-coordinators"],
+    haOff: ["XCP-ng docs: HA troubleshooting, disabling HA", "https://docs.xcp-ng.org/troubleshooting/troubleshooting-ha/#disabling-ha"],
+    haWhy: ["XCP-ng docs: My host rebooted, why?", "https://docs.xcp-ng.org/troubleshooting/troubleshooting-ha/#my-host-rebooted-why-did-it-reboot"],
+    coalesce: ["XCP-ng docs: Storage, Coalesce", "https://docs.xcp-ng.org/storage/#coalesce"],
+    xoBackup: ["Xen Orchestra docs: Backup troubleshooting (VDI chain protection)", "https://docs.xen-orchestra.com/backups-and-dr/backup_troubleshooting"],
+    nfs: ["XCP-ng docs: Storage, NFS", "https://docs.xcp-ng.org/storage/#nfs"],
+    srConn: ["XCP-ng docs: Modify an existing SR connection (PBD)", "https://docs.xcp-ng.org/storage/#how-to-modify-an-existing-sr-connection"],
+    iscsi: ["XCP-ng docs: iSCSI troubleshooting", "https://docs.xcp-ng.org/troubleshooting/storage/iscsi-troubleshooting/"],
+    crash: ["XCP-ng docs: Host crashes and crash dumps", "https://docs.xcp-ng.org/troubleshooting/advanced/#host-crashes-and-crash-dumps"],
+    xen: ["XCP-ng docs: Reading the hypervisor state (xl dmesg)", "https://docs.xcp-ng.org/troubleshooting/advanced/#reading-the-hypervisor-state"],
+    report: ["XCP-ng docs: Produce a status report (xen-bugtool)", "https://docs.xcp-ng.org/troubleshooting/log-files/#produce-a-status-report"],
+    mem: ["XenServer 8 docs: VM memory (static and dynamic limits)", "https://docs.xenserver.com/en-us/xenserver/8/vms/vm-memory"],
+    xe: ["XCP-ng docs: xe CLI (xe help)", "https://docs.xcp-ng.org/management/manage-locally/cli/"],
+  };
+  const RES = [
+    { n: 1, t: "VM shows Running but is really off", tw: "VM in invalid / wrong state, restart hostd and vpxa", log: "/var/log/xensource.log",
+      steps: ["Compare what XAPI believes (xe vm-list) with what Xen runs (xl list).", "Read xensource.log around the failed start/stop.", "Restart the toolstack: xe-toolstack-restart. It restarts the management layer only; running VMs are not touched.", "Only if xl list proves the VM is off on every host and the toolstack restart did not fix it: xe vm-reset-powerstate uuid=<vm> --force. Wrong use can corrupt disks."],
+      docs: [DOC.commonPower, DOC.xsFail, DOC.logs] },
+    { n: 2, t: "Pool master (coordinator) lost", tw: "vSphere HA elects a new primary; Host Client when vCenter is down", log: "/var/log/xha.log",
+      steps: ["With HA on, the pool elects a new coordinator by itself. Check xha.log before touching anything.", "With HA off: prove the old master is really dead (ping, BMC/iLO/iDRAC, power state). Two masters = split brain.", "On one surviving member: xe pool-emergency-transition-to-master.", "Point the others at it: xe pool-recover-slaves on the new master, or xe pool-emergency-reset-master master-address=<new master> on each member.", "Check the pool default SR (xe pool-param-list), restart VMs that were on the dead host, then repair or re-join the old host."],
+      docs: [DOC.haCoord, DOC.xsFail, DOC.haOff] },
+    { n: 3, t: "Backup skipped: unhealthy VDI chain", tw: "Virtual machine disks consolidation is needed", log: "/var/log/SMlog",
+      steps: ["Understand it: a skipped run is Xen Orchestra protecting the SR, not a failure. The chain limit is 30.", "grep -i -E \"exception|error|coales\" /var/log/SMlog (rotated files too) for coalesce errors.", "Check SR free space: coalesce needs room (XO docs suggest 30% or more free, depending on VM size).", "Check a coalesce is running: ps axf | grep vhd. Rescan the SR in XO and watch the \"disks to coalesce\" list shrink.", "Reduce snapshot frequency. Last resort: migrate the VM disks to another SR, which forces a coalesce. Never delete chain VDIs by hand."],
+      docs: [DOC.xoBackup, DOC.coalesce, DOC.logs] },
+    { n: 4, t: "SR disconnected, VMs will not start", tw: "Datastore inaccessible / All Paths Down", log: "/var/log/SMlog",
+      steps: ["Find the detached PBD: xe pbd-list sr-uuid=<sr> params=uuid,host-name-label,currently-attached.", "Read SMlog for the mount or login error.", "Prove reachability from the host: ping the storage, showmount -e <nfs server> or iscsiadm discovery; check MTU and the storage VLAN.", "Fix the cause with the storage/network team first, then xe pbd-plug uuid=<pbd>.", "Never unplug a PBD with running VMs; changing SR connection settings means destroying and recreating the PBD with VMs stopped."],
+      docs: [DOC.nfs, DOC.srConn, DOC.iscsi] },
+    { n: 5, t: "Host crashed and rebooted by itself", tw: "PSOD, core dump, vm-support bundle", log: "/var/log/kern.log, /var/crash, xl dmesg",
+      steps: ["Find when: last -x, and the uptime in XO.", "Separate the four causes: hardware (MCE in kern.log / xl dmesg, BMC event log), Xen hypervisor crash, dom0 kernel panic, or HA fencing.", "Rule HA fencing in or out in /var/log/xha.log.", "List crash dumps: xe host-crashdump-list (dumps sit on the boot disk; delete after analysis).", "Collect the status report before any further reboot: xen-bugtool --yestoall, then share it privately with support."],
+      docs: [DOC.crash, DOC.xen, DOC.report, DOC.haWhy] },
+    { n: 6, t: "VM will not start: HOST_NOT_ENOUGH_FREE_MEMORY", tw: "Insufficient resources / admission control", log: "xe output, xl info",
+      steps: ["Read the error: the two numbers are bytes needed and bytes free.", "Check the host: xe host-list params=name-label,memory-total,memory-free (or xl info).", "Free memory safely: live-migrate another VM away (xe vm-migrate) or start this VM on another host.", "Or reduce this VM: xe vm-memory-limits-set with static-min <= dynamic-min <= dynamic-max <= static-max. Keep static-min at its current value; it is set per guest OS.", "Never force past the check. Plan pool capacity so one host can fail (N+1)."],
+      docs: [DOC.mem, DOC.xe] },
+  ];
+  const a = (d) => '<a href="' + esc(d[1]) + '" target="_blank" rel="noopener">' + esc(d[0]) + "</a>";
+  $("#tab-card").innerHTML =
+    '<div class="stack"><div class="card"><h2>Six common cases: how to resolve them</h2><p class="muted small">Each card lists the resolution path, its VMware twin, and the official documentation it is built from. Confirm commands with <code>xe help &lt;command&gt;</code> on your version.</p></div>' +
+    RES.map((r) => '<details' + (r.n === 1 ? " open" : "") + '><summary>Case ' + r.n + ": " + esc(r.t) + '</summary><p class="small muted" style="margin-top:8px"><b>VMware twin:</b> ' + esc(r.tw) + " &middot; <b>First log:</b> <code>" + esc(r.log) + '</code></p><ol class="small" style="padding-left:20px;margin:6px 0 10px">' + r.steps.map((x) => "<li>" + esc(x) + "</li>").join("") + '</ol><h3>Official documentation</h3><ul class="small" style="padding-left:18px;margin:0">' + r.docs.map((d) => "<li>" + a(d) + "</li>").join("") + "</ul></details>").join("") +
+    '<div class="card"><h2>VMware to XCP-ng: the words you already know</h2><div class="tablewrap"><table><thead><tr><th>VMware</th><th>XCP-ng / Xen Orchestra</th></tr></thead><tbody>' +
+    [["ESXi host", "XCP-ng host (Xen hypervisor + dom0 control domain)"], ["vCenter", "Xen Orchestra (XOA)"], ["Host Client", "XO Lite (built into the host)"], ["hostd / vpxa", "XAPI toolstack (xe-toolstack-restart)"], ["Cluster", "Pool, run by the pool master (coordinator)"], ["Datastore", "SR (storage repository)"], ["Datastore mounted on a host", "PBD (plugged / unplugged)"], ["VMDK", "VDI (VHD or qcow2 file / LV)"], ["vmnic / vNIC / port group", "PIF / VIF / network (bridge, e.g. xenbr0)"], ["VMware Tools", "Xen guest tools / PV drivers"], ["vMotion / Storage vMotion", "Live migration / storage migration"], ["Snapshot consolidation", "Coalesce"], ["esxcli, PowerCLI", "xe CLI, xo-cli"], ["vm-support", "xen-bugtool (status report)"]].map((r) => "<tr><td>" + esc(r[0]) + '</td><td class="wrap">' + esc(r[1]) + "</td></tr>").join("") + "</tbody></table></div></div>" +
+    '<div class="card"><h2>Log files: VMware to XCP-ng</h2><div class="tablewrap"><table><thead><tr><th>VMware</th><th>XCP-ng</th><th>Tells you</th></tr></thead><tbody><tr><td>hostd.log</td><td>/var/log/xensource.log</td><td>The host agent (XAPI)</td></tr><tr><td>vmkernel.log</td><td>/var/log/kern.log, xl dmesg</td><td>Kernel, hardware, Xen</td></tr><tr><td>vmkernel.log (storage)</td><td>/var/log/SMlog</td><td>Storage manager, coalesce</td></tr><tr><td>vmkernel / vmkwarning</td><td>/var/log/daemon.log</td><td>xenopsd, migration, storage motion</td></tr><tr><td>fdm.log</td><td>/var/log/xha.log</td><td>HA, heartbeat, fencing</td></tr><tr><td>vpxd.log</td><td>Xen Orchestra logs</td><td>Central management</td></tr></tbody></table></div><p class="small" style="margin-top:8px">Source: ' + a(DOC.logs) + "</p></div>" +
+    '<div class="card"><h2>Moving VMs off VMware</h2><ul class="small" style="padding-left:18px;margin:0"><li>' + a(["Vates KB VKB-1128: Migration from VMware to XCP-ng", "https://docs.vates.tech/kb/vkb-1128/"]) + "</li><li>" + a(["Xen Orchestra docs: VMware migration (V2V) guide", "https://docs.xen-orchestra.com/guides/v2v-migration-guide"]) + "</li><li>" + a(["XCP-ng docs: Migrate to XCP-ng", "https://docs.xcp-ng.org/installation/migrate-to-xcp-ng"]) + "</li><li>" + a(["Vates Knowledge Base (all articles)", "https://docs.vates.tech/kb/"]) + "</li></ul></div>" +
+    '<div class="card"><h2>Honest limits</h2><p>The screens are reconstructions, the logs are illustrative, and the commands come from the documentation linked above. Check each one with <code>xe help &lt;command&gt;</code> on a real lab host, and check the installer field format on the real screen. Case 2 needs at least two hosts to test for real. Not affiliated with or endorsed by Vates.</p></div></div>';
+
+  renderInstall();
+  showTab("install");
+})();
+
+</script>
+
+</body></html>
